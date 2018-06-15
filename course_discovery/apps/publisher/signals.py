@@ -23,6 +23,7 @@ def get_related_discovery_course_run(publisher_course_run):
 
 @receiver(post_save, sender=CourseRun)
 def create_course_run_in_studio_receiver(sender, instance, created, **kwargs):  # pylint: disable=unused-argument
+    import pudb;pu.db
     if created and waffle.switch_is_active('enable_publisher_create_course_run_in_studio'):
         course = instance.course
         for organization in course.organizations.all():

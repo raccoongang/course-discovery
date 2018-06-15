@@ -246,12 +246,6 @@ class CourseRunForm(BaseForm):
         widget=forms.RadioSelect(
             choices=((1, _("Yes")), (0, _("No")))), initial=0, required=False
     )
-    pacing_type = forms.ChoiceField(
-        label=_('Pacing'),
-        widget=forms.RadioSelect,
-        choices=CourseRunPacing.choices,
-        required=True
-    )
 
     transcript_languages = forms.ModelMultipleChoiceField(
         queryset=LanguageTag.objects.all(),
@@ -296,7 +290,7 @@ class CourseRunForm(BaseForm):
     class Meta:
         model = CourseRun
         fields = (
-            'length', 'transcript_languages', 'language', 'min_effort', 'max_effort', 'target_content', 'pacing_type',
+            'length', 'transcript_languages', 'language', 'min_effort', 'max_effort', 'target_content',
             'video_language', 'staff', 'start', 'end', 'is_xseries', 'xseries_name', 'is_professional_certificate',
             'professional_certificate_name', 'is_micromasters', 'micromasters_name', 'lms_course_id',
         )
