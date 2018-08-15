@@ -57,7 +57,6 @@ class StudioAPI:
             logger.warning('No course team admin specified for course [%s]. This may result in a Studio '
                            'course run being created without a course team.', course.number)
 
-
         return {
             'title': publisher_course_run.title_override or course.title,
             'org': course.organizations.first().key,
@@ -76,7 +75,6 @@ class StudioAPI:
         return self._api.course_runs(discovery_course_run.key).rerun.post(data)
 
     def create_course_run_in_studio(self, publisher_course_run):
-        import pudb; pu.db
         data = self.generate_data_for_studio_api(publisher_course_run)
         return self._api.course_runs.post(data)
 

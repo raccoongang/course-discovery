@@ -439,7 +439,6 @@ class CourseRun(TimeStampedModel, ChangedByMixin):
 
     @property
     def lms_pacing(self):
-        # import pudb; pu.db
         if self.course.partner and self.course.partner.site and self.lms_course_id:
             lms = LMSAPIClient(self.course.partner.site)
             details = lms.get_course_details(self.lms_course_id)
