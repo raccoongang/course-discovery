@@ -1044,7 +1044,7 @@ class CourseRunEditView(mixins.LoginRequiredMixin, mixins.PublisherPermissionMix
         if form_data_is_valid:
             try:
                 with transaction.atomic():
-                    import pudb; pu.db
+                    # import pudb; pu.db
                     course_run = run_form.save(changed_by=user)
                     run_form.save_m2m()
                     course_run.staff.clear()

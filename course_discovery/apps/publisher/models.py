@@ -18,6 +18,8 @@ from sortedm2m.fields import SortedManyToManyField
 from stdimage.models import StdImageField
 from taggit.managers import TaggableManager
 
+
+from course_discovery.apps.core.api_client.lms import LMSAPIClient
 from course_discovery.apps.core.models import Currency, User
 from course_discovery.apps.course_metadata.choices import CourseRunPacing
 from course_discovery.apps.course_metadata.models import Course as DiscoveryCourse
@@ -434,6 +436,25 @@ class CourseRun(TimeStampedModel, ChangedByMixin):
 
     def get_absolute_url(self):
         return reverse('publisher:publisher_course_run_detail', kwargs={'pk': self.id})
+
+    @property
+    def lms_pacing(self):
+        # import pudb; pu.db
+        if self.course.partner and self.course.partner.site and self.lms_course_id:
+            lms = LMSAPIClient(self.course.partner.site)
+            details = lms.get_course_details(self.lms_course_id)
+            if details and details['pacing']:
+                return details['pacing']
+
+        return None
+
+    @property
+    def is_self_paced(self):
+        return True if self.lms_pacing == 'self' else False
+
+    @property
+    def is_instructor_paced(self):
+        return True if self.lms_pacing == 'instructor' else False
 
 
 class Seat(TimeStampedModel, ChangedByMixin):

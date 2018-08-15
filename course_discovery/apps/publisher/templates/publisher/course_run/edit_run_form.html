@@ -79,13 +79,31 @@
                 <div class="field-title">{% trans "COURSE PACING" %} <span class="required float-right">* Required for review</span></div>
                 <div class="row">
                     <div class="col col-6 help-text">
-                        <p>{% trans "Instructor-paced courses include individual assignments that have specific due dates before the course end date." %} </p>
-                        <p>{% trans "Self-paced courses do not have individual assignments that have specific due dates before the course end date. All assignments are due on the course end date." %}</p>
+                        <p>
+                            {% trans "The pacing type for this course." %} 
+                            <a class="studio-pacing-link" href="{{ course_run.studio_url }}" target="_blank">{% trans "You can edit the course pacing type in Studio." %}</a>
+                        </p>
                     </div>
                     <div class="col col-6">
+                            <label class="field-label " for="id-pacing-type">{% trans "Course Pacing" %}  <span class="required">*</span></label>
+                            {% if course_run.lms_pacing %}
+                                <!-- <input type="text" class="field-input" id="id-pacing-type" name="pacing-type" value={{ course_run.lms_pacing }} disabled> -->
+                                <div class="checkbox-inline">
+                                    <div id="id_pacing_type" class="field-input input-checkbox">
+                                    <label for="id_pacing_type_0">Instructor-paced</label>
+                                        <input type="radio" disabled name="pacing_type" value="instructor_paced" class="field-input input-checkbox" {{ course_run.is_instructor_paced|yesno:"checked, " }} required="" id="id_pacing_type_0">
+                                        <label for="id_pacing_type_1">Self-paced</label>
+                                        <input disabled type="radio" name="pacing_type" value="self_paced" class="field-input input-checkbox" {{ course_run.is_self_paced|yesno:"checked, " }} required="" id="id_pacing_type_1">
+                                    </div>
+                                </div>
+                            {% else %}
+                                {% trans "Not yet created" %}
+                            {% endif %}
+                        </div>
+                    <!-- <div class="col col-6">
                         <label class="field-label">{{ run_form.pacing_type.label_tag }}  <span class="required">*</span></label>
                         <div class="checkbox-inline">{{ run_form.pacing_type }}</div>
-                    </div>
+                    </div> -->
                 </div>
 
                 <div class="field-title">{% trans "STUDIO URL" %} <span class="required float-right">* Required for review</span></div>
