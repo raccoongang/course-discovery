@@ -283,7 +283,7 @@ class CourseRun(TimeStampedModel, ChangedByMixin):
     certificate_generation = models.DateTimeField(null=True, blank=True)
     pacing_type = models.CharField(
         max_length=255, db_index=True, null=True, blank=True, choices=CourseRunPacing.choices,
-        validators=[CourseRunPacing.validator]
+        validators=[CourseRunPacing.validator], default=CourseRunPacing.Instructor
     )
     staff = SortedManyToManyField(Person, blank=True, related_name='publisher_course_runs_staffed')
     min_effort = models.PositiveSmallIntegerField(

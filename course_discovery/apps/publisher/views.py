@@ -823,6 +823,7 @@ class CreateCourseRunView(mixins.LoginRequiredMixin, mixins.PublisherUserRequire
         return render(request, self.template_name, context, status=status)
 
     def _process_post_request(self, request, parent_course, context=None):
+        # import pudb; pu.db
         context = context or {}
 
         run_form = self.run_form(request.POST)
@@ -924,6 +925,7 @@ class CreateCourseRunView(mixins.LoginRequiredMixin, mixins.PublisherUserRequire
         return context
 
     def post(self, request, *args, **kwargs):
+        # import pudb; pu.db
         return self._process_post_request(request, self._get_parent_course())
 
 

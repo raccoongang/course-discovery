@@ -615,8 +615,9 @@ class CreateCourseRunViewTests(SiteMixin, TestCase):
 
         Create a course run with a verified seat (for a verified and credit seat, audit seat
         is automatically created), then try to create a new run of the same course and verify
-        the previous course run's seats and pacing is automatically populated.
+        the previous course run's seats are automatically populated.
         """
+        # import pdb; pdb.set_trace()
         verified_seat_price = 550.0
         latest_run = self.course.course_runs.latest('created')
         factories.SeatFactory(course_run=latest_run, type=Seat.VERIFIED, price=verified_seat_price)
@@ -627,17 +628,12 @@ class CreateCourseRunViewTests(SiteMixin, TestCase):
         response = self.client.get(self.create_course_run_url_new)
         response_content = BeautifulSoup(response.content)
 
-        pacing_type_attribute = response_content.find(
-            "input", {"value": latest_run.pacing_type, "type": "radio", "name": "pacing_type"}
-        )
         seat_type_attribute = response_content.find("option", {"value": verified_seat.type})
         price_attribute = response_content.find(
             "input", {"value": verified_seat.price, "id": "id_price", "step": "0.01", "type": "number"}
         )
 
         # Verify that existing course run and seat values auto populated on form.
-        self.assertIsNotNone(pacing_type_attribute)
-        self.assertIn('checked=""', str(pacing_type_attribute))
         self.assertIsNotNone(seat_type_attribute)
         self.assertIn('selected=""', str(seat_type_attribute))
         self.assertIsNotNone(price_attribute)
@@ -737,6 +733,8 @@ class CreateCourseRunViewTests(SiteMixin, TestCase):
 
         self.course.entitlements.create(mode=entitlement_mode, price=entitlement_price)
         post_data = {'start': '2018-02-01 00:00:00', 'end': '2018-02-28 00:00:00', 'pacing_type': 'instructor_paced'}
+
+        # import pudb; pu.db
 
         num_courseruns_before = self.course.course_runs.count()
         response = self.client.post(self.create_course_run_url_new, post_data)
