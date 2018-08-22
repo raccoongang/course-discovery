@@ -204,7 +204,7 @@ class CourseRunDetailView(mixins.LoginRequiredMixin, mixins.PublisherPermissionM
                     '{number}: {title}'.format(number=course_run.course.number, title=course_run.course.title)
                 ),
                 (None, '{type}: {start}'.format(
-                    type=course_run.get_pacing_type_display(), start=start_date
+                    type=self.get_lms_pacing_type_display(course_run.lms_pacing), start=start_date
                 ))
             ]
         )
@@ -236,6 +236,15 @@ class CourseRunDetailView(mixins.LoginRequiredMixin, mixins.PublisherPermissionM
         context['is_entitlement_version'] = course_run.is_entitlement_version
 
         return context
+
+    def get_lms_pacing_type_display(self, lms_pacing):
+        # TODO: better else case; raise exception? do this in the model?
+        if lms_pacing == 'self':
+            return 'Self-paced'
+        elif lms_pacing == 'instructor':
+            return 'Instructor-paced'
+        else:
+            return None
 
 
 # pylint: disable=attribute-defined-outside-init
