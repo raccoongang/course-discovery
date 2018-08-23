@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import ddt
 import factory
 import mock
+import responses
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.contrib.auth.models import Group
@@ -53,6 +54,7 @@ from course_discovery.apps.publisher.wrappers import CourseRunWrapper
 from course_discovery.apps.publisher_comments.models import CommentTypeChoices
 from course_discovery.apps.publisher_comments.tests.factories import CommentFactory
 
+from course_discovery.apps.core.models import Partner
 
 @ddt.ddt
 class CreateCourseViewTests(SiteMixin, TestCase):
@@ -882,7 +884,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
             target_status_code=302
         )
 
-    def test_page_without_data(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_page_without_data(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that user can access detail page without any data
         available for that course-run.
         """
@@ -911,7 +915,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         """ Helper method to add credit seat for a course-run. """
         factories.SeatFactory(type='credit', course_run=self.course_run, credit_provider='ASU', credit_hours=9)
 
-    def test_course_run_detail_page_staff(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_run_detail_page_staff(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that detail page contains all the data for drupal, studio and
         cat with publisher admin user.
         """
@@ -1028,7 +1034,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         for value in [self.course_run.start, self.course_run.end]:
             self.assertContains(response, value.strftime(self.date_format))
 
-    def test_course_run_with_version(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_run_with_version(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that a SEAT_VERSION course still shows enrollment
         track data, and an ENTITLEMENT_VERSION course does not
@@ -1050,7 +1058,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Enrollment Track')
 
-    def test_detail_page_with_comments(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_detail_page_with_comments(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that detail page contains all the data along with comments
         for course.
         """
@@ -1087,7 +1097,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
             response = self.client.get(page_url)
             self.assertEqual(response.status_code, 403)
 
-    def test_detail_page_with_role_assignment(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_detail_page_with_role_assignment(self, mock_access_token):  # pylint: disable=unusued-argument
         """ Verify that detail page contains role assignment data for internal user. """
 
         # Add users in internal user group
@@ -1114,7 +1126,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
 
         self.assertEqual(response.context['role_widgets'], expected_roles)
 
-    def test_detail_page_approval_widget_with_non_internal_user(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_detail_page_approval_widget_with_non_internal_user(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that user can see change approval widget. """
 
         # Create a user and assign course view permission.
@@ -1132,7 +1146,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertIn('role_widgets', response.context)
         self.assertContains(response, 'REVIEWS')
 
-    def test_details_page_with_edit_permission(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_details_page_with_edit_permission(self, mock_access_token):  # pylint: disable=unused-argument
         """ Test that user can see edit button on course run detail page. """
         user = self._create_user_and_login(OrganizationExtension.VIEW_COURSE_RUN)
         organization = OrganizationFactory()
@@ -1153,7 +1169,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         user.groups.add(organization_extension.group)
         self.assert_can_edit_permission(can_edit=True)
 
-    def test_edit_permission_with_no_organization(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_edit_permission_with_no_organization(self, mock_access_token):  # pylint: disable=unused-argument
         """ Test that user can't see edit button on course run detail page
         if there is no organization in course.
         """
@@ -1200,7 +1218,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
 
         return user
 
-    def test_tabs_for_course_team_user(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_tabs_for_course_team_user(self, mock_access_token):  # pylint: disable=unused-argument
         """Verify that internal/admin user will see only one tab. """
         response = self.client.get(self.page_url)
         self.assertContains(response, '<button class="selected" data-tab="#tab-1">All</button>')
@@ -1209,8 +1229,10 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertNotIn(response_string, '<button data-tab="#tab-3">CAT</button>')
         self.assertNotIn(response_string, '<button data-tab="#tab-4">DRUPAL</button>')
         self.assertNotIn(response_string, '<button data-tab="#tab-5">Salesforce</button>')
-
-    def test_comments_with_enable_switch(self):
+    
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_comments_with_enable_switch(self, mock_access_token):   # pylint: disable=unused-argument
         """ Verify that user will see the comments widget when
         'publisher_comment_widget_feature' is enabled.
         """
@@ -1219,7 +1241,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
 
         self.assertContains(response, '<div id="comments-widget" class="comment-container ">')
 
-    def test_comments_with_disable_switch(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_comments_with_disable_switch(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that user will not see the comments widget when
         'publisher_comment_widget_feature' is disable.
         """
@@ -1227,7 +1251,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         response = self.client.get(self.page_url)
         self.assertContains(response, '<div id="comments-widget" class="comment-container hidden">')
 
-    def test_approval_widget_with_enable_switch(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_approval_widget_with_enable_switch(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that user will see the history widget when
         'publisher_approval_widget_feature' is enabled.
         """
@@ -1236,7 +1262,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         response = self.client.get(self.page_url)
         self.assertContains(response, '<div id="approval-widget" class="approval-widget ">')
 
-    def test_approval_widget_with_disable_switch(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_approval_widget_with_disable_switch(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that user will not see the history widget when
         'publisher_approval_widget_feature' is disabled.
         """
@@ -1245,7 +1273,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         response = self.client.get(self.page_url)
         self.assertContains(response, '<div id="approval-widget" class="approval-widget hidden">')
 
-    def test_course_run_approval_widget_for_course_team(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_run_approval_widget_for_course_team(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that user can see approval widget on course detail page with `Send for Review` button.
         """
@@ -1275,7 +1305,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         # Verify that Reviewed button is enabled
         self.assertContains(response, self.get_expected_data(CourseRunStateChoices.Review))
 
-    def test_course_approval_widget_for_marketing_team(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_approval_widget_for_marketing_team(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that project coordinator can't see the `Send for Review` button.
         """
@@ -1323,7 +1355,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.course_run.save()
         self.course_run.staff.add(PersonFactory())
 
-    def test_parent_course_not_approved(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_parent_course_not_approved(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that if parent course is not approved than their will be a message
         shown on course run detail page that user can't submit for approval.
         """
@@ -1339,7 +1373,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         response = self.client.get(self.page_url)
         self.assertContains(response, '<div class="parent-course-approval">')
 
-    def test_course_run_mark_as_reviewed(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_run_mark_as_reviewed(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that user can see mark as reviewed button on course detail page.
         """
@@ -1361,7 +1397,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertContains(response, 'Mark as Reviewed')
         self.assertContains(response, self.get_expected_data(CourseRunStateChoices.Approved))
 
-    def test_course_with_reviewed(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_with_reviewed(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that user can see approval widget on course detail page with `Reviewed`.
         """
@@ -1391,7 +1429,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertContains(response, '<span class="icon fa fa-check" aria-hidden="true">', count=2)
         self.assertContains(response, 'Sent for Review', count=1)
 
-    def test_preview_widget(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_preview_widget(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that user can see preview widget on course detail page.
         """
@@ -1428,7 +1468,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         )
         self.assertContains(response, 'Accepted')
 
-    def test_course_preview(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_preview(self, mock_access_token):  # pylint: disable=unused-argument
         """Verify that publisher user can see preview widget."""
         factories.CourseUserRoleFactory(course=self.course, user=self.user, role=PublisherUserRole.Publisher)
         self.course_run_state.name = CourseStateChoices.Approved
@@ -1458,7 +1500,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         )
         self.assertContains(response, '<input id="id-review-url" type="text">')
 
-    def test_course_publish_button(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_publish_button(self, mock_access_token):  # pylint: disable=unused-argument
         """Verify that publisher user can see Publish button."""
         user_role = factories.CourseUserRoleFactory(
             course=self.course, user=self.user, role=PublisherUserRole.Publisher
@@ -1481,7 +1525,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         # Verify that course team user cannot se publish button.
         self.assertNotContains(response, '<button class="btn-brand btn-base btn-publish"')
 
-    def test_course_published(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_published(self, mock_access_token):  # pylint: disable=unused-argument
         """Verify that user can see Published status if course is published."""
         self.course_run_state.name = CourseRunStateChoices.Published
         self.course_run_state.preview_accepted = True
@@ -1500,7 +1546,9 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertContains(response, expected)
         self.assertNotContains(response, '<button class="btn-brand btn-base btn-publish"')
 
-    def test_edit_permission_with_owner_role(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_edit_permission_with_owner_role(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Test that user can see edit button if he has permission and has role for course.
         """
@@ -3657,7 +3705,9 @@ class CourseRunEditViewTests(SiteMixin, TestCase):
         # state change to draft again.
         self.assertEqual(course_run.course_run_state.name, CourseRunStateChoices.Draft)
 
-    def test_studio_instance_on_edit_page(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_studio_instance_on_edit_page(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that internal users can update course key from edit page.
         """
@@ -3720,7 +3770,9 @@ class CourseRunEditViewTests(SiteMixin, TestCase):
         page_url = 'https://{host}{path}'.format(host=self.site.domain.strip('/'), path=object_path)
         self.assertIn(page_url, body)
 
-    def test_studio_instance_with_course_team(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_studio_instance_with_course_team(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that non internal users cannot see course key field.
         """
@@ -3753,7 +3805,9 @@ class CourseRunEditViewTests(SiteMixin, TestCase):
         assert lms_course_id_attribute is not None
         assert studio_link_attribute is not None
 
-    def test_studio_instance_with_project_coordinator(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_studio_instance_with_project_coordinator(self, mock_access_token):  # pylint: disable=unused-argument
         """
         Verify that PC can see the course-key input field. And on post course-key remains in db.
         """
@@ -3870,9 +3924,11 @@ class CourseRunEditViewTests(SiteMixin, TestCase):
         self.assertEqual(course_run_state.name, CourseRunStateChoices.Draft)
         self.assertEqual(course_run_state.owner_role, PublisherUserRole.ProjectCoordinator)
 
-    def test_course_key_not_getting_blanked(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_course_key_not_getting_blanked(self, mock_access_token):  # pylint: disable=unused-argument
         """
-        Verify that `lms_course_id` not getting blanked if course team updates with empty value.
+        Verify that `lms_course_id` notest_course_run_detail_page_stafft getting blanked if course team updates with empty value.
         """
         self.client.logout()
         user = self.new_course.course_team_admin
@@ -3899,7 +3955,9 @@ class CourseRunEditViewTests(SiteMixin, TestCase):
         # Verify that `lms_course_id` not wiped.
         self.assertEqual(self.new_course_run.lms_course_id, lms_course_id)
 
-    def test_published_course_run_editing_not_change_state_and_ownership(self):
+    @responses.activate
+    @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
+    def test_published_course_run_editing_not_change_state_and_ownership(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that when a user made changes in published course run, course-run state remains
          same and owner ship as well."""
 
