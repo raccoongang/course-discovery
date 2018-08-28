@@ -45,7 +45,7 @@ from course_discovery.apps.publisher.models import (
 )
 from course_discovery.apps.publisher.tests import factories
 from course_discovery.apps.publisher.tests.utils import create_non_staff_user_and_login
-from course_discovery.apps.publisher.utils import is_email_notification_enabled
+from course_discovery.apps.publisher.utils import is_email_notification_enabled, get_lms_pacing_type_display
 from course_discovery.apps.publisher.views import logger as publisher_views_logger
 from course_discovery.apps.publisher.views import (
     COURSE_ROLES, COURSES_ALLOWED_PAGE_SIZES, CourseRunDetailView, get_course_role_widgets_data
@@ -55,6 +55,7 @@ from course_discovery.apps.publisher_comments.models import CommentTypeChoices
 from course_discovery.apps.publisher_comments.tests.factories import CommentFactory
 
 from course_discovery.apps.core.models import Partner
+from course_discovery.apps.core.tests.mixins import LMSAPIClientMixin
 
 @ddt.ddt
 class CreateCourseViewTests(SiteMixin, TestCase):
@@ -619,7 +620,6 @@ class CreateCourseRunViewTests(SiteMixin, TestCase):
         is automatically created), then try to create a new run of the same course and verify
         the previous course run's seats are automatically populated.
         """
-        # import pdb; pdb.set_trace()
         verified_seat_price = 550.0
         latest_run = self.course.course_runs.latest('created')
         factories.SeatFactory(course_run=latest_run, type=Seat.VERIFIED, price=verified_seat_price)
@@ -736,8 +736,6 @@ class CreateCourseRunViewTests(SiteMixin, TestCase):
         self.course.entitlements.create(mode=entitlement_mode, price=entitlement_price)
         post_data = {'start': '2018-02-01 00:00:00', 'end': '2018-02-28 00:00:00', 'pacing_type': 'instructor_paced'}
 
-        # import pudb; pu.db
-
         num_courseruns_before = self.course.course_runs.count()
         response = self.client.post(self.create_course_run_url_new, post_data)
         num_courseruns_after = self.course.course_runs.count()
@@ -840,7 +838,7 @@ class CreateCourseRunViewTests(SiteMixin, TestCase):
 
 
 @ddt.ddt
-class CourseRunDetailTests(SiteMixin, TestCase):
+class CourseRunDetailTests(LMSAPIClientMixin, SiteMixin, TestCase):
     """ Tests for the course-run detail view. """
 
     def setUp(self):
@@ -868,6 +866,7 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.course_state.name = CourseStateChoices.Approved
         self.course_state.save()
         self.course_run.staff.add(PersonFactory(profile_url='http://test-profile'))
+
 
     def test_page_without_login(self):
         """ Verify that user can't access detail page when not logged in. """
@@ -1060,10 +1059,13 @@ class CourseRunDetailTests(SiteMixin, TestCase):
 
     @responses.activate
     @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
-    def test_detail_page_with_comments(self, mock_access_token):  # pylint: disable=unused-argument
+    @mock.patch('course_discovery.apps.publisher.models.CourseRun.lms_pacing', new_callable=mock.PropertyMock)
+    def test_detail_page_with_comments(self, mock_lms_pacing, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that detail page contains all the data along with comments
         for course.
         """
+        mock_lms_pacing.return_value = 'self'
+
         self.client.logout()
         self.client.login(username=self.user.username, password=USER_PASSWORD)
 
@@ -1099,7 +1101,7 @@ class CourseRunDetailTests(SiteMixin, TestCase):
 
     @responses.activate
     @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
-    def test_detail_page_with_role_assignment(self, mock_access_token):  # pylint: disable=unusued-argument
+    def test_detail_page_with_role_assignment(self, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that detail page contains role assignment data for internal user. """
 
         # Add users in internal user group
@@ -1200,7 +1202,7 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertContains(response, '<li class="breadcrumb-item active">')
         self.assertContains(
             response, '{type}: {start}'.format(
-                type=course_run.get_pacing_type_display(),
+                type=get_lms_pacing_type_display(course_run.lms_pacing),
                 start=course_run.start.strftime("%B %d, %Y")
             )
         )

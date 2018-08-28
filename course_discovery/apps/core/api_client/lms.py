@@ -122,7 +122,6 @@ class LMSAPIClient(object):
             * pacing: Course pacing. Possible values: instructor, self
         """
         resource = '/api/courses/v1/courses/{}'.format(course_key)
-
         try:
             return getattr(self.client, resource).get()
         except (SlumberBaseException, ConnectionError, Timeout, KeyError) as exception:

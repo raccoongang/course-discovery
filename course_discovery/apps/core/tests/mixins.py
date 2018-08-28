@@ -116,3 +116,21 @@ class LMSAPIClientMixin(object):
             content_type='application/json',
             status=status
         )
+
+    def mock_get_course_details(self, lms_url, course_key, status=200):
+        """
+        TODO: update documentation Mock the api access requests endpoint response of the LMS.
+        """
+        data = {
+            'pacing': 'self'
+        }
+
+        print('url', lms_url.rstrip('/') + '/api/courses/v1/courses/{}'.format(course_key))
+
+        responses.add(
+            responses.GET,
+            lms_url.rstrip('/') + '/api/courses/v1/courses/{}'.format(course_key),
+            body=json.dumps(data),
+            content_type='application/json',
+            status=status
+        )

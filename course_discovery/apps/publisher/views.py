@@ -37,7 +37,7 @@ from course_discovery.apps.publisher.models import (
 )
 from course_discovery.apps.publisher.utils import (
     get_internal_users, has_role_for_course, is_internal_user, is_project_coordinator_user, is_publisher_admin,
-    make_bread_crumbs
+    make_bread_crumbs, get_lms_pacing_type_display
 )
 from course_discovery.apps.publisher.wrappers import CourseRunWrapper
 
@@ -236,14 +236,6 @@ class CourseRunDetailView(mixins.LoginRequiredMixin, mixins.PublisherPermissionM
         context['is_entitlement_version'] = course_run.is_entitlement_version
 
         return context
-
-def get_lms_pacing_type_display(lms_pacing):
-    if lms_pacing == 'self':
-        return 'Self-paced'
-    elif lms_pacing == 'instructor':
-        return 'Instructor-paced'
-    else:
-        return lms_pacing
 
 
 # pylint: disable=attribute-defined-outside-init
@@ -831,7 +823,6 @@ class CreateCourseRunView(mixins.LoginRequiredMixin, mixins.PublisherUserRequire
         return render(request, self.template_name, context, status=status)
 
     def _process_post_request(self, request, parent_course, context=None):
-        # import pudb; pu.db
         context = context or {}
 
         run_form = self.run_form(request.POST)
@@ -933,7 +924,6 @@ class CreateCourseRunView(mixins.LoginRequiredMixin, mixins.PublisherUserRequire
         return context
 
     def post(self, request, *args, **kwargs):
-        # import pudb; pu.db
         return self._process_post_request(request, self._get_parent_course())
 
 
