@@ -884,10 +884,13 @@ class CourseRunDetailTests(SiteMixin, TestCase):
 
     @responses.activate
     @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
-    def test_page_without_data(self, mock_access_token):  # pylint: disable=unused-argument
+    @mock.patch('course_discovery.apps.publisher.models.CourseRun.lms_pacing', new_callable=mock.PropertyMock)
+    def test_page_without_data(self, mock_lms_pacing, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that user can access detail page without any data
         available for that course-run.
         """
+        mock_lms_pacing.return_value = 'self'
+
         course_run = factories.CourseRunFactory(course=self.course)
         factories.CourseRunStateFactory(course_run=course_run)
         assign_perm(
@@ -915,10 +918,13 @@ class CourseRunDetailTests(SiteMixin, TestCase):
 
     @responses.activate
     @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
-    def test_course_run_detail_page_staff(self, mock_access_token):  # pylint: disable=unused-argument
+    @mock.patch('course_discovery.apps.publisher.models.CourseRun.lms_pacing', new_callable=mock.PropertyMock)
+    def test_course_run_detail_page_staff(self, mock_lms_pacing, mock_access_token):  # pylint: disable=unused-argument
         """ Verify that detail page contains all the data for drupal, studio and
         cat with publisher admin user.
         """
+        mock_lms_pacing.return_value = 'self'
+
         response = self.client.get(self.page_url)
         self.assertEqual(response.status_code, 200)
         self._assert_credits_seats(response, self.wrapped_course_run.credit_seat)
@@ -1199,6 +1205,7 @@ class CourseRunDetailTests(SiteMixin, TestCase):
                 title=course_run.course.title)
         )
         self.assertContains(response, '<li class="breadcrumb-item active">')
+        import pdb; pdb.set_trace()
         self.assertContains(
             response, '{type}: {start}'.format(
                 type=get_lms_pacing_type_display(course_run.lms_pacing),
