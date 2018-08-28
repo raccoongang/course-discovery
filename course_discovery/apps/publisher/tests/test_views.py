@@ -3,10 +3,6 @@ import json
 import random
 from datetime import datetime, timedelta
 
-import ddt
-import factory
-import mock
-import responses
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.contrib.auth.models import Group
@@ -18,15 +14,17 @@ from django.forms import model_to_dict
 from django.http import Http404
 from django.test import TestCase
 from django.urls import reverse
-from guardian.shortcuts import assign_perm
-from opaque_keys.edx.keys import CourseKey
 from pytz import timezone
-from testfixtures import LogCapture
 
+import ddt
+import factory
+import mock
+import responses
 from course_discovery.apps.api.tests.mixins import SiteMixin
-from course_discovery.apps.core.models import Currency, User
+from course_discovery.apps.core.models import Currency, Partner, User
 from course_discovery.apps.core.tests.factories import USER_PASSWORD, UserFactory
 from course_discovery.apps.core.tests.helpers import make_image_file
+from course_discovery.apps.core.tests.mixins import LMSAPIClientMixin
 from course_discovery.apps.course_metadata.tests import toggle_switch
 from course_discovery.apps.course_metadata.tests.factories import (
     CourseFactory, OrganizationFactory, PersonFactory, SubjectFactory
@@ -45,7 +43,7 @@ from course_discovery.apps.publisher.models import (
 )
 from course_discovery.apps.publisher.tests import factories
 from course_discovery.apps.publisher.tests.utils import create_non_staff_user_and_login
-from course_discovery.apps.publisher.utils import is_email_notification_enabled, get_lms_pacing_type_display
+from course_discovery.apps.publisher.utils import get_lms_pacing_type_display, is_email_notification_enabled
 from course_discovery.apps.publisher.views import logger as publisher_views_logger
 from course_discovery.apps.publisher.views import (
     COURSE_ROLES, COURSES_ALLOWED_PAGE_SIZES, CourseRunDetailView, get_course_role_widgets_data
@@ -53,9 +51,10 @@ from course_discovery.apps.publisher.views import (
 from course_discovery.apps.publisher.wrappers import CourseRunWrapper
 from course_discovery.apps.publisher_comments.models import CommentTypeChoices
 from course_discovery.apps.publisher_comments.tests.factories import CommentFactory
+from guardian.shortcuts import assign_perm
+from opaque_keys.edx.keys import CourseKey
+from testfixtures import LogCapture
 
-from course_discovery.apps.core.models import Partner
-from course_discovery.apps.core.tests.mixins import LMSAPIClientMixin
 
 @ddt.ddt
 class CreateCourseViewTests(SiteMixin, TestCase):

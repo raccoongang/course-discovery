@@ -6,7 +6,6 @@ import logging
 from datetime import datetime, timedelta
 from functools import reduce
 
-import waffle
 from django.contrib import messages
 from django.contrib.sites.models import Site
 from django.core.exceptions import ObjectDoesNotExist
@@ -20,8 +19,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView, View
-from guardian.shortcuts import get_objects_for_user
 
+import waffle
 from course_discovery.apps.core.models import User
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 from course_discovery.apps.publisher import emails, mixins, serializers
@@ -36,10 +35,11 @@ from course_discovery.apps.publisher.models import (
     PublisherUser, Seat, UserAttributes
 )
 from course_discovery.apps.publisher.utils import (
-    get_internal_users, has_role_for_course, is_internal_user, is_project_coordinator_user, is_publisher_admin,
-    make_bread_crumbs, get_lms_pacing_type_display
+    get_internal_users, get_lms_pacing_type_display, has_role_for_course, is_internal_user, is_project_coordinator_user,
+    is_publisher_admin, make_bread_crumbs
 )
 from course_discovery.apps.publisher.wrappers import CourseRunWrapper
+from guardian.shortcuts import get_objects_for_user
 
 logger = logging.getLogger(__name__)
 
