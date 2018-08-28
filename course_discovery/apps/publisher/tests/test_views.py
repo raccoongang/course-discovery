@@ -838,7 +838,7 @@ class CreateCourseRunViewTests(SiteMixin, TestCase):
 
 
 @ddt.ddt
-class CourseRunDetailTests(LMSAPIClientMixin, SiteMixin, TestCase):
+class CourseRunDetailTests(SiteMixin, TestCase):
     """ Tests for the course-run detail view. """
 
     def setUp(self):
