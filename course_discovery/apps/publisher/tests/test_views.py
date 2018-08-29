@@ -3,6 +3,10 @@ import json
 import random
 from datetime import datetime, timedelta
 
+import ddt
+import factory
+import mock
+import responses
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.contrib.auth.models import Group
@@ -14,17 +18,15 @@ from django.forms import model_to_dict
 from django.http import Http404
 from django.test import TestCase
 from django.urls import reverse
+from guardian.shortcuts import assign_perm
+from opaque_keys.edx.keys import CourseKey
 from pytz import timezone
+from testfixtures import LogCapture
 
-import ddt
-import factory
-import mock
-import responses
 from course_discovery.apps.api.tests.mixins import SiteMixin
 from course_discovery.apps.core.models import Currency, Partner, User
 from course_discovery.apps.core.tests.factories import USER_PASSWORD, UserFactory
 from course_discovery.apps.core.tests.helpers import make_image_file
-from course_discovery.apps.core.tests.mixins import LMSAPIClientMixin
 from course_discovery.apps.course_metadata.tests import toggle_switch
 from course_discovery.apps.course_metadata.tests.factories import (
     CourseFactory, OrganizationFactory, PersonFactory, SubjectFactory
@@ -51,9 +53,6 @@ from course_discovery.apps.publisher.views import (
 from course_discovery.apps.publisher.wrappers import CourseRunWrapper
 from course_discovery.apps.publisher_comments.models import CommentTypeChoices
 from course_discovery.apps.publisher_comments.tests.factories import CommentFactory
-from guardian.shortcuts import assign_perm
-from opaque_keys.edx.keys import CourseKey
-from testfixtures import LogCapture
 
 
 @ddt.ddt
@@ -866,7 +865,6 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.course_state.save()
         self.course_run.staff.add(PersonFactory(profile_url='http://test-profile'))
 
-
     def test_page_without_login(self):
         """ Verify that user can't access detail page when not logged in. """
         self.client.logout()
@@ -1205,7 +1203,6 @@ class CourseRunDetailTests(SiteMixin, TestCase):
                 title=course_run.course.title)
         )
         self.assertContains(response, '<li class="breadcrumb-item active">')
-        import pdb; pdb.set_trace()
         self.assertContains(
             response, '{type}: {start}'.format(
                 type=get_lms_pacing_type_display(course_run.lms_pacing),
@@ -1237,7 +1234,7 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertNotIn(response_string, '<button data-tab="#tab-3">CAT</button>')
         self.assertNotIn(response_string, '<button data-tab="#tab-4">DRUPAL</button>')
         self.assertNotIn(response_string, '<button data-tab="#tab-5">Salesforce</button>')
-    
+
     @responses.activate
     @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
     def test_comments_with_enable_switch(self, mock_access_token):   # pylint: disable=unused-argument
@@ -3936,7 +3933,8 @@ class CourseRunEditViewTests(SiteMixin, TestCase):
     @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
     def test_course_key_not_getting_blanked(self, mock_access_token):  # pylint: disable=unused-argument
         """
-        Verify that `lms_course_id` notest_course_run_detail_page_stafft getting blanked if course team updates with empty value.
+        Verify that `lms_course_id` notest_course_run_detail_page_stafft getting blanked if course 
+        team updates with empty value.
         """
         self.client.logout()
         user = self.new_course.course_team_admin

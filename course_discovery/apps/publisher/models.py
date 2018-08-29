@@ -380,6 +380,12 @@ class CourseRun(TimeStampedModel, ChangedByMixin):
         return None
 
     @property
+    def studio_schedule_and_details_url(self):
+        if self.lms_course_id and self.course.partner and self.course.partner.studio_url:
+            path = 'settings/details/{lms_course_id}'.format(lms_course_id=self.lms_course_id)
+            return urljoin(self.course.partner.studio_url, path)
+
+    @property
     def has_valid_staff(self):
         """ Check that each staff member has his bio data and image."""
         staff_members = self.staff.all()

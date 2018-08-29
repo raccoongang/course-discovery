@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: edx-platform\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-08-23 21:06+0000\n"
+"POT-Creation-Date: 2018-08-29 14:13+0000\n"
 "PO-Revision-Date: 2018-04-09 20:13+0000\n"
 "Last-Translator: Muhammad Ayub khan <ayubkhan@edx.org>\n"
 "Language-Team: openedx-translation <openedx-translation@googlegroups.com>\n"
@@ -341,8 +341,8 @@ msgstr "Öthérs Ⱡ'σяєм ιρѕυ#"
 #: apps/course_metadata/models.py apps/course_metadata/models.py
 #: apps/course_metadata/models.py apps/course_metadata/models.py
 #: apps/course_metadata/models.py apps/course_metadata/models.py
-#: apps/course_metadata/models.py apps/course_metadata/models.py
-#: apps/journal/models.py apps/journal/models.py
+#: apps/course_metadata/models.py apps/journal/models.py
+#: apps/journal/models.py
 msgid "UUID"
 msgstr "ÛÛÌD Ⱡ'σяєм ι#"
 
@@ -834,11 +834,11 @@ msgstr ""
 "Strïng-ßäséd fïéld stätïng höw müçh thé çöst ïs (é.g. $1000). Ⱡ'σяєм ιρѕυм "
 "∂σłσя ѕιт αмєт, ¢σηѕє¢тєтυя α#"
 
-#: apps/course_metadata/models.py apps/course_metadata/models.py
+#: apps/course_metadata/models.py
 msgid "Organization name"
 msgstr "Örgänïzätïön nämé Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт αмє#"
 
-#: apps/course_metadata/models.py apps/course_metadata/models.py
+#: apps/course_metadata/models.py
 msgid "These programs are for a different partner than the pathway itself: {}"
 msgstr ""
 "Thésé prögräms äré för ä dïfférént pärtnér thän thé päthwäý ïtsélf: {} "
@@ -1119,10 +1119,6 @@ msgstr "Çöürsé Énd Däté Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт α#"
 #: apps/publisher/forms.py
 msgid "Instructor"
 msgstr "Ìnstrüçtör Ⱡ'σяєм ιρѕυм ∂σłσ#"
-
-#: apps/publisher/forms.py
-msgid "Pacing"
-msgstr "Päçïng Ⱡ'σяєм ιρѕυ#"
 
 #: apps/publisher/forms.py
 msgid "Transcript Languages"
@@ -1977,35 +1973,6 @@ msgstr ""
 "¢ιłłυм ∂σłσяє єυ ƒυgιαт ηυłłα ραяιαтυя. єχ¢єρтєυя ѕιηт #"
 
 #: apps/publisher/templates/publisher/add_courserun_form.html
-msgid "PACING TYPE"
-msgstr "PÀÇÌNG TÝPÉ Ⱡ'σяєм ιρѕυм ∂σłσя #"
-
-#: apps/publisher/templates/publisher/add_courserun_form.html
-#: apps/publisher/templates/publisher/course_run/edit_run_form.html
-msgid ""
-"Instructor-paced courses include individual assignments that have specific "
-"due dates before the course end date."
-msgstr ""
-"Ìnstrüçtör-päçéd çöürsés ïnçlüdé ïndïvïdüäl ässïgnménts thät hävé spéçïfïç "
-"düé dätés ßéföré thé çöürsé énd däté. Ⱡ'σяєм ιρѕυм ∂σłσя#"
-
-#: apps/publisher/templates/publisher/add_courserun_form.html
-#: apps/publisher/templates/publisher/course_run/edit_run_form.html
-msgid ""
-"Self-paced courses do not have individual assignments that have specific due"
-" dates before the course end date. All assignments are due on the course end"
-" date."
-msgstr ""
-"Sélf-päçéd çöürsés dö nöt hävé ïndïvïdüäl ässïgnménts thät hävé spéçïfïç düé"
-" dätés ßéföré thé çöürsé énd däté. Àll ässïgnménts äré düé ön thé çöürsé énd"
-" däté. Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт αмєт, ¢σηѕє¢тєтυя α∂ιριѕι¢ιηg єłιт, ѕє∂ ∂σ "
-"єιυѕмσ∂ тємρσя ιη¢ι∂ι∂υηт υт łαвσяє єт ∂σłσяє мαgηα αłιqυα. υт єηιм α∂ мιηιм"
-" νєηιαм, qυιѕ ησѕтяυ∂ єχєя¢ιтαтιση υłłαм¢σ łαвσяιѕ ηιѕι υт αłιqυιρ єχ єα "
-"¢σммσ∂σ ¢σηѕєqυαт. ∂υιѕ αυтє ιяυяє ∂σłσя ιη яєρяєнєη∂єяιт ιη νσłυρтαтє νєłιт"
-" єѕѕє ¢ιłłυм ∂σłσяє єυ ƒυgιαт ηυłłα ραяιαтυя. єχ¢єρтєυя ѕιηт σ¢¢αє¢αт "
-"¢υρι∂αтαт ηση ρяσι∂єηт, ѕυηт ιη ¢υłρα qυι σƒƒι¢ια ∂єѕєяυηт#"
-
-#: apps/publisher/templates/publisher/add_courserun_form.html
 #: apps/publisher/templates/publisher/course_run/edit_run_form.html
 msgid "COURSE END DATE"
 msgstr "ÇÖÛRSÉ ÉND DÀTÉ Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт α#"
@@ -2847,14 +2814,30 @@ msgid "COURSE PACING"
 msgstr "ÇÖÛRSÉ PÀÇÌNG Ⱡ'σяєм ιρѕυм ∂σłσя ѕι#"
 
 #: apps/publisher/templates/publisher/course_run/edit_run_form.html
+msgid "The pacing type for this course."
+msgstr ""
+"Thé päçïng týpé för thïs çöürsé. Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт αмєт, ¢σηѕє¢тє#"
+
+#: apps/publisher/templates/publisher/course_run/edit_run_form.html
+msgid "You can edit the course pacing type in Studio."
+msgstr ""
+"Ýöü çän édït thé çöürsé päçïng týpé ïn Stüdïö. Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт αмєт, "
+"¢σηѕє¢тєтυя α#"
+
+#: apps/publisher/templates/publisher/course_run/edit_run_form.html
+msgid "Course Pacing"
+msgstr "Çöürsé Päçïng Ⱡ'σяєм ιρѕυм ∂σłσя ѕι#"
+
+#: apps/publisher/templates/publisher/course_run/edit_run_form.html
+#: apps/publisher/templates/publisher/course_run/edit_run_form.html
+msgid "Not yet created"
+msgstr "Nöt ýét çréätéd Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт α#"
+
+#: apps/publisher/templates/publisher/course_run/edit_run_form.html
 msgid "The Studio URL for this course run. The edX PC creates this URL."
 msgstr ""
 "Thé Stüdïö ÛRL för thïs çöürsé rün. Thé édX PÇ çréätés thïs ÛRL. Ⱡ'σяєм "
 "ιρѕυм ∂σłσя ѕιт αмєт, ¢σηѕє¢тєтυя α#"
-
-#: apps/publisher/templates/publisher/course_run/edit_run_form.html
-msgid "Not yet created"
-msgstr "Nöt ýét çréätéd Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт α#"
 
 #: apps/publisher/templates/publisher/course_run/edit_run_form.html
 msgid "PROGRAM ASSOCIATION"

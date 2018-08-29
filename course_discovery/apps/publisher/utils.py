@@ -135,6 +135,7 @@ def parse_datetime_field(date):
     except ValueError:
         return
 
+
 def get_lms_pacing_type_display(lms_pacing):
     if lms_pacing == 'self':
         return 'Self-paced'
