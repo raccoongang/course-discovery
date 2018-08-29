@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: edx-platform\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-08-29 14:13+0000\n"
+"POT-Creation-Date: 2018-08-29 15:11+0000\n"
 "PO-Revision-Date: 2018-04-09 20:13+0000\n"
 "Last-Translator: Muhammad Ayub khan <ayubkhan@edx.org>\n"
 "Language-Team: openedx-translation <openedx-translation@googlegroups.com>\n"
@@ -267,162 +267,162 @@ msgstr ""
 msgid "Programs can only be activated if they have a banner image."
 msgstr ""
 
-#: apps/course_metadata/models.py:82
+#: apps/course_metadata/models.py:83
 msgid "Facebook"
 msgstr ""
 
-#: apps/course_metadata/models.py:83
+#: apps/course_metadata/models.py:84
 msgid "Twitter"
 msgstr ""
 
-#: apps/course_metadata/models.py:84
+#: apps/course_metadata/models.py:85
 msgid "Blog"
 msgstr ""
 
-#: apps/course_metadata/models.py:85
+#: apps/course_metadata/models.py:86
 msgid "Others"
 msgstr ""
 
-#: apps/course_metadata/models.py:119 apps/course_metadata/models.py:158
-#: apps/course_metadata/models.py:218 apps/course_metadata/models.py:263
-#: apps/course_metadata/models.py:341 apps/course_metadata/models.py:457
-#: apps/course_metadata/models.py:950 apps/course_metadata/models.py:1520
-#: apps/course_metadata/models.py:1554 apps/journal/models.py:23
+#: apps/course_metadata/models.py:120 apps/course_metadata/models.py:159
+#: apps/course_metadata/models.py:219 apps/course_metadata/models.py:264
+#: apps/course_metadata/models.py:342 apps/course_metadata/models.py:466
+#: apps/course_metadata/models.py:959 apps/course_metadata/models.py:1529
+#: apps/course_metadata/models.py:1563 apps/journal/models.py:23
 #: apps/journal/models.py:67
 msgid "UUID"
 msgstr ""
 
-#: apps/course_metadata/models.py:123 apps/course_metadata/models.py:161
-#: apps/course_metadata/models.py:943
+#: apps/course_metadata/models.py:124 apps/course_metadata/models.py:162
+#: apps/course_metadata/models.py:952
 msgid "Leave this field blank to have the value generated automatically."
 msgstr ""
 
-#: apps/course_metadata/models.py:153
+#: apps/course_metadata/models.py:154
 msgid "Subject model translations"
 msgstr ""
 
-#: apps/course_metadata/models.py:192
+#: apps/course_metadata/models.py:193
 msgid "Topic model translations"
 msgstr ""
 
-#: apps/course_metadata/models.py:219
+#: apps/course_metadata/models.py:220
 msgid ""
 "Please do not use any spaces or special characters other than period, "
 "underscore or hyphen. This key will be used in the course's course key."
 msgstr ""
 
-#: apps/course_metadata/models.py:229
+#: apps/course_metadata/models.py:230
 msgid ""
 "Logo to be displayed on certificates. If this logo is the same as "
 "logo_image_url, copy and paste the same value to both fields."
 msgstr ""
 
-#: apps/course_metadata/models.py:235 apps/course_metadata/models.py:521
+#: apps/course_metadata/models.py:236 apps/course_metadata/models.py:530
 msgid ""
 "Pick a tag from the suggestions. To make a new tag, add a comma after the "
 "tag name."
 msgstr ""
 
-#: apps/course_metadata/models.py:240
+#: apps/course_metadata/models.py:241
 msgid ""
 "Please do not use any spaces or special characters other than period, "
 "underscore or hyphen in the key field."
 msgstr ""
 
-#: apps/course_metadata/models.py:286
+#: apps/course_metadata/models.py:287
 msgid "People"
 msgstr ""
 
-#: apps/course_metadata/models.py:367
+#: apps/course_metadata/models.py:368
 msgid "Add the course image"
 msgstr ""
 
-#: apps/course_metadata/models.py:375
+#: apps/course_metadata/models.py:376
 msgid "Course number format e.g CS002x, BIO1.1x, BIO1.2x"
 msgstr ""
 
-#: apps/course_metadata/models.py:465 apps/publisher/models.py:349
+#: apps/course_metadata/models.py:474 apps/publisher/models.py:349
 msgid ""
 "Title specific for this run of a course. Leave this value blank to default "
 "to the parent course's title."
 msgstr ""
 
-#: apps/course_metadata/models.py:474 apps/publisher/models.py:343
+#: apps/course_metadata/models.py:483 apps/publisher/models.py:343
 msgid ""
 "Short description specific for this run of a course. Leave this value blank "
 "to default to the parent course's short_description attribute."
 msgstr ""
 
-#: apps/course_metadata/models.py:479 apps/publisher/models.py:354
+#: apps/course_metadata/models.py:488 apps/publisher/models.py:354
 msgid ""
 "Full description specific for this run of a course. Leave this value blank "
 "to default to the parent course's full_description attribute."
 msgstr ""
 
-#: apps/course_metadata/models.py:484 apps/publisher/models.py:291
+#: apps/course_metadata/models.py:493 apps/publisher/models.py:291
 msgid ""
 "Estimated minimum number of hours per week needed to complete a course run."
 msgstr ""
 
-#: apps/course_metadata/models.py:487 apps/publisher/models.py:294
+#: apps/course_metadata/models.py:496 apps/publisher/models.py:294
 msgid ""
 "Estimated maximum number of hours per week needed to complete a course run."
 msgstr ""
 
-#: apps/course_metadata/models.py:490
+#: apps/course_metadata/models.py:499
 msgid "Estimated number of weeks needed to complete this course run."
 msgstr ""
 
-#: apps/course_metadata/models.py:508
+#: apps/course_metadata/models.py:517
 msgid "Indicates whether the course relation has been manually overridden."
 msgstr ""
 
-#: apps/course_metadata/models.py:516
+#: apps/course_metadata/models.py:525
 msgid ""
 "'What You Will Learn' description for this particular course run. Leave this "
 "value blank to default to the parent course's Outcome attribute."
 msgstr ""
 
-#: apps/course_metadata/models.py:755
+#: apps/course_metadata/models.py:764
 msgid "Archived"
 msgstr ""
 
-#: apps/course_metadata/models.py:757
+#: apps/course_metadata/models.py:766
 msgid "Current"
 msgstr ""
 
-#: apps/course_metadata/models.py:759
+#: apps/course_metadata/models.py:768
 msgid "Starting Soon"
 msgstr ""
 
-#: apps/course_metadata/models.py:761
+#: apps/course_metadata/models.py:770
 msgid "Upcoming"
 msgstr ""
 
-#: apps/course_metadata/models.py:838 apps/publisher/models.py:476
+#: apps/course_metadata/models.py:847 apps/publisher/models.py:476
 msgid "Honor"
 msgstr ""
 
-#: apps/course_metadata/models.py:839 apps/publisher/models.py:477
+#: apps/course_metadata/models.py:848 apps/publisher/models.py:477
 msgid "Audit"
 msgstr ""
 
-#: apps/course_metadata/models.py:840 apps/publisher/forms.py:380
+#: apps/course_metadata/models.py:849 apps/publisher/forms.py:380
 #: apps/publisher/forms.py:489 apps/publisher/models.py:478
 #: apps/publisher/models.py:538
 msgid "Verified"
 msgstr ""
 
-#: apps/course_metadata/models.py:841 apps/publisher/models.py:539
+#: apps/course_metadata/models.py:850 apps/publisher/models.py:539
 msgid "Professional"
 msgstr ""
 
-#: apps/course_metadata/models.py:842 apps/publisher/forms.py:382
+#: apps/course_metadata/models.py:851 apps/publisher/forms.py:382
 #: apps/publisher/forms.py:491 apps/publisher/models.py:481
 msgid "Credit"
 msgstr ""
 
-#: apps/course_metadata/models.py:915 apps/publisher/forms.py:140
+#: apps/course_metadata/models.py:924 apps/publisher/forms.py:140
 #: apps/publisher/models.py:93
 #: apps/publisher/templates/publisher/course_detail.html:211
 #: apps/publisher/templates/publisher/course_revision_history.html:147
@@ -430,11 +430,11 @@ msgstr ""
 msgid "FAQ"
 msgstr ""
 
-#: apps/course_metadata/models.py:916
+#: apps/course_metadata/models.py:925
 msgid "FAQs"
 msgstr ""
 
-#: apps/course_metadata/models.py:926
+#: apps/course_metadata/models.py:935
 msgid ""
 "Seat types that qualify for completion of programs of this type. Learners "
 "completing associated courses, but enrolled in other seat types, will NOT "
@@ -442,220 +442,220 @@ msgid ""
 "program."
 msgstr ""
 
-#: apps/course_metadata/models.py:940
+#: apps/course_metadata/models.py:949
 msgid "Please provide an image file with transparent background"
 msgstr ""
 
-#: apps/course_metadata/models.py:952
+#: apps/course_metadata/models.py:961
 msgid "The user-facing display title for this Program."
 msgstr ""
 
-#: apps/course_metadata/models.py:954
+#: apps/course_metadata/models.py:963
 msgid "A brief, descriptive subtitle for the Program."
 msgstr ""
 
-#: apps/course_metadata/models.py:957
+#: apps/course_metadata/models.py:966
 msgid "The lifecycle status of this Program."
 msgstr ""
 
-#: apps/course_metadata/models.py:961
+#: apps/course_metadata/models.py:970
 msgid "Slug used to generate links to the marketing site"
 msgstr ""
 
-#: apps/course_metadata/models.py:965
+#: apps/course_metadata/models.py:974
 msgid ""
 "If this box is not checked, courses will be ordered as in the courses select "
 "box above."
 msgstr ""
 
-#: apps/course_metadata/models.py:979
+#: apps/course_metadata/models.py:988
 msgid ""
 "This field is now deprecated (ECOM-6021).Estimated number of weeks needed to "
 "complete a course run belonging to this program."
 msgstr ""
 
-#: apps/course_metadata/models.py:997
+#: apps/course_metadata/models.py:1006
 msgid "Image used for discovery cards"
 msgstr ""
 
-#: apps/course_metadata/models.py:1004
+#: apps/course_metadata/models.py:1013
 msgid ""
 "This field can be used by API clients to determine the order in which "
 "instructors will be displayed on program pages. Instructors in this list "
 "should appear before all others associated with this programs courses runs."
 msgstr ""
 
-#: apps/course_metadata/models.py:1016
+#: apps/course_metadata/models.py:1025
 msgid "The description of credit redemption for courses in program"
 msgstr ""
 
-#: apps/course_metadata/models.py:1021
+#: apps/course_metadata/models.py:1030
 msgid "Allow courses in this program to be purchased in a single transaction"
 msgstr ""
 
-#: apps/course_metadata/models.py:1025
+#: apps/course_metadata/models.py:1034
 msgid ""
 "Hide program on marketing site landing and search pages. This program MAY "
 "have a detail page."
 msgstr ""
 
-#: apps/course_metadata/models.py:1297
+#: apps/course_metadata/models.py:1306
 msgid "The actual rank number"
 msgstr ""
 
-#: apps/course_metadata/models.py:1298
+#: apps/course_metadata/models.py:1307
 msgid "What does the rank number mean"
 msgstr ""
 
-#: apps/course_metadata/models.py:1299
+#: apps/course_metadata/models.py:1308
 msgid "From where the rank is obtained"
 msgstr ""
 
-#: apps/course_metadata/models.py:1311
+#: apps/course_metadata/models.py:1320
 msgid "Callback URL to partner application flow"
 msgstr ""
 
-#: apps/course_metadata/models.py:1314
+#: apps/course_metadata/models.py:1323
 msgid "Overall program ranking (e.g. \"#1 in the U.S.\")"
 msgstr ""
 
-#: apps/course_metadata/models.py:1322
+#: apps/course_metadata/models.py:1331
 msgid "Provide a campus image to display on mobile displays"
 msgstr ""
 
-#: apps/course_metadata/models.py:1328
+#: apps/course_metadata/models.py:1337
 msgid "Provide a campus image to display on tablet displays"
 msgstr ""
 
-#: apps/course_metadata/models.py:1334
+#: apps/course_metadata/models.py:1343
 msgid "Provide a campus image to display on desktop displays"
 msgstr ""
 
-#: apps/course_metadata/models.py:1340
+#: apps/course_metadata/models.py:1349
 msgid "Provide a campus image for the header of the degree"
 msgstr ""
 
-#: apps/course_metadata/models.py:1346
+#: apps/course_metadata/models.py:1355
 msgid "Provide a background image for the title section of the degree"
 msgstr ""
 
-#: apps/course_metadata/models.py:1351
+#: apps/course_metadata/models.py:1360
 msgid "The fine print that displays at the Tuition section's bottom"
 msgstr ""
 
-#: apps/course_metadata/models.py:1356
+#: apps/course_metadata/models.py:1365
 msgid "The fine print that displays at the Deadline section's bottom"
 msgstr ""
 
-#: apps/course_metadata/models.py:1363
+#: apps/course_metadata/models.py:1372
 msgid "The sailthru email list name to capture leads"
 msgstr ""
 
-#: apps/course_metadata/models.py:1378
+#: apps/course_metadata/models.py:1387
 msgid "Please provide an image file for the lead capture banner."
 msgstr ""
 
-#: apps/course_metadata/models.py:1382
+#: apps/course_metadata/models.py:1391
 msgid "URL to micromasters landing page"
 msgstr ""
 
-#: apps/course_metadata/models.py:1388
+#: apps/course_metadata/models.py:1397
 msgid "Micromasters verbose title"
 msgstr ""
 
-#: apps/course_metadata/models.py:1394
+#: apps/course_metadata/models.py:1403
 msgid "Micromasters descriptive paragraph"
 msgstr ""
 
-#: apps/course_metadata/models.py:1399
+#: apps/course_metadata/models.py:1408
 msgid "Ranking display for search card (e.g. \"#1 in the U.S.\""
 msgstr ""
 
-#: apps/course_metadata/models.py:1405
+#: apps/course_metadata/models.py:1414
 msgid "Cost display for search card (e.g. \"$9,999\""
 msgstr ""
 
-#: apps/course_metadata/models.py:1411
+#: apps/course_metadata/models.py:1420
 msgid "Number of courses for search card (e.g. \"11 Courses\""
 msgstr ""
 
-#: apps/course_metadata/models.py:1440
+#: apps/course_metadata/models.py:1449
 msgid "Award"
 msgstr ""
 
-#: apps/course_metadata/models.py:1441
+#: apps/course_metadata/models.py:1450
 msgid "Bell"
 msgstr ""
 
-#: apps/course_metadata/models.py:1442
+#: apps/course_metadata/models.py:1451
 msgid "Certificate"
 msgstr ""
 
-#: apps/course_metadata/models.py:1443
+#: apps/course_metadata/models.py:1452
 msgid "Checkmark"
 msgstr ""
 
-#: apps/course_metadata/models.py:1444
+#: apps/course_metadata/models.py:1453
 msgid "Info"
 msgstr ""
 
-#: apps/course_metadata/models.py:1445
+#: apps/course_metadata/models.py:1454
 msgid "Sitemap"
 msgstr ""
 
-#: apps/course_metadata/models.py:1446
+#: apps/course_metadata/models.py:1455
 msgid "User"
 msgstr ""
 
-#: apps/course_metadata/models.py:1447
+#: apps/course_metadata/models.py:1456
 msgid "Dollar"
 msgstr ""
 
-#: apps/course_metadata/models.py:1448
+#: apps/course_metadata/models.py:1457
 msgid "Book"
 msgstr ""
 
-#: apps/course_metadata/models.py:1449
+#: apps/course_metadata/models.py:1458
 msgid "Mortar Board"
 msgstr ""
 
-#: apps/course_metadata/models.py:1453
+#: apps/course_metadata/models.py:1462
 msgid "Icon FA class"
 msgstr ""
 
-#: apps/course_metadata/models.py:1454
+#: apps/course_metadata/models.py:1463
 msgid "Paired text"
 msgstr ""
 
-#: apps/course_metadata/models.py:1473
+#: apps/course_metadata/models.py:1482
 msgid "Deadline applies for this semester (e.g. Spring 2019"
 msgstr ""
 
-#: apps/course_metadata/models.py:1477
+#: apps/course_metadata/models.py:1486
 msgid "Describes the deadline (e.g. Early Admission Deadline)"
 msgstr ""
 
-#: apps/course_metadata/models.py:1481
+#: apps/course_metadata/models.py:1490
 msgid "The date after which the deadline expires (e.g. January 1, 2019)"
 msgstr ""
 
-#: apps/course_metadata/models.py:1485
+#: apps/course_metadata/models.py:1494
 msgid "The time after which the deadline expires (e.g. 11:59 PM EST)."
 msgstr ""
 
-#: apps/course_metadata/models.py:1503
+#: apps/course_metadata/models.py:1512
 msgid "Describes what the cost is for (e.g. Tuition)"
 msgstr ""
 
-#: apps/course_metadata/models.py:1507
+#: apps/course_metadata/models.py:1516
 msgid "String-based field stating how much the cost is (e.g. $1000)."
 msgstr ""
 
-#: apps/course_metadata/models.py:1559
+#: apps/course_metadata/models.py:1568
 msgid "Organization name"
 msgstr ""
 
-#: apps/course_metadata/models.py:1581
+#: apps/course_metadata/models.py:1590
 msgid "These programs are for a different partner than the pathway itself: {}"
 msgstr ""
 
