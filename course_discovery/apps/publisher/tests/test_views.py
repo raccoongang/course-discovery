@@ -45,7 +45,7 @@ from course_discovery.apps.publisher.models import (
 )
 from course_discovery.apps.publisher.tests import factories
 from course_discovery.apps.publisher.tests.utils import create_non_staff_user_and_login
-from course_discovery.apps.publisher.utils import get_lms_pacing_type_display, is_email_notification_enabled
+from course_discovery.apps.publisher.utils import is_email_notification_enabled
 from course_discovery.apps.publisher.views import logger as publisher_views_logger
 from course_discovery.apps.publisher.views import (
     COURSE_ROLES, COURSES_ALLOWED_PAGE_SIZES, CourseRunDetailView, get_course_role_widgets_data
@@ -1205,7 +1205,7 @@ class CourseRunDetailTests(SiteMixin, TestCase):
         self.assertContains(response, '<li class="breadcrumb-item active">')
         self.assertContains(
             response, '{type}: {start}'.format(
-                type=get_lms_pacing_type_display(course_run.lms_pacing),
+                type=course_run.lms_pacing_type_display,
                 start=course_run.start.strftime("%B %d, %Y")
             )
         )
@@ -3933,7 +3933,7 @@ class CourseRunEditViewTests(SiteMixin, TestCase):
     @mock.patch.object(Partner, 'access_token', return_value='JWT fake')
     def test_course_key_not_getting_blanked(self, mock_access_token):  # pylint: disable=unused-argument
         """
-        Verify that `lms_course_id` notest_course_run_detail_page_stafft getting blanked if course 
+        Verify that `lms_course_id` notest_course_run_detail_page_stafft getting blanked if course
         team updates with empty value.
         """
         self.client.logout()

@@ -449,9 +449,18 @@ class CourseRun(TimeStampedModel, ChangedByMixin):
             lms = LMSAPIClient(self.course.partner.site)
             details = lms.get_course_details(self.lms_course_id)
             if details and details['pacing']:
-                return details['pacing']
+                return details['pacing'] + '_paced'
 
         return None
+
+    @property
+    def lms_pacing_type_display(self):
+        if self.lms_pacing == CourseRunPacing.Self:
+            return CourseRunPacing.values[CourseRunPacing.Self]
+        elif self.lms_pacing == CourseRunPacing.Instructor:
+            return CourseRunPacing.values[CourseRunPacing.Instructor]
+        else:
+            return self.lms_pacing
 
     @property
     def is_self_paced(self):

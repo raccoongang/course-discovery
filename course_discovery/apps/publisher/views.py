@@ -36,7 +36,7 @@ from course_discovery.apps.publisher.models import (
     PublisherUser, Seat, UserAttributes
 )
 from course_discovery.apps.publisher.utils import (
-    get_internal_users, get_lms_pacing_type_display, has_role_for_course, is_internal_user, is_project_coordinator_user,
+    get_internal_users, has_role_for_course, is_internal_user, is_project_coordinator_user,
     is_publisher_admin, make_bread_crumbs
 )
 from course_discovery.apps.publisher.wrappers import CourseRunWrapper
@@ -204,7 +204,7 @@ class CourseRunDetailView(mixins.LoginRequiredMixin, mixins.PublisherPermissionM
                     '{number}: {title}'.format(number=course_run.course.number, title=course_run.course.title)
                 ),
                 (None, '{type}: {start}'.format(
-                    type=get_lms_pacing_type_display(course_run.lms_pacing), start=start_date
+                    type=course_run.lms_pacing_type_display, start=start_date
                 ))
             ]
         )
@@ -433,7 +433,7 @@ class CourseEditView(mixins.PublisherPermissionMixin, UpdateView):
             if course_run.course_run_state.is_published:
                 start_date = course_run.start.strftime("%B %d, %Y") if course_run.start else None
                 published_runs.add('{type} - {start}'.format(
-                    type=course_run.get_pacing_type_display(),
+                    type=course_run.lms_pacing_type_display,
                     start=start_date
                 ))
         return published_runs
@@ -460,12 +460,12 @@ class CourseEditView(mixins.PublisherPermissionMixin, UpdateView):
 
             if not type_is_valid:
                 misconfigured_seat_type_runs.add('{type} - {start}'.format(
-                    type=course_run.get_pacing_type_display(),
+                    type=course_run.lms_pacing_type_display,
                     start=course_run.start.strftime("%B %d, %Y")
                 ))
             if not price_is_valid:
                 misconfigured_price_runs.add('{type} - {start}'.format(
-                    type=course_run.get_pacing_type_display(),
+                    type=course_run.lms_pacing_type_display,
                     start=course_run.start.strftime("%B %d, %Y")
                 ))
 
@@ -1011,7 +1011,7 @@ class CourseRunEditView(mixins.LoginRequiredMixin, mixins.PublisherPermissionMix
                 (reverse('publisher:publisher_courses'), 'Courses'),
                 (reverse('publisher:publisher_course_detail', kwargs={'pk': course.id}), course.title),
                 (None, '{type}: {start}'.format(
-                    type=course_run.get_pacing_type_display(), start=start_date
+                    type=course_run.lms_pacing_type_display, start=start_date
                 ))
             ]
         )
