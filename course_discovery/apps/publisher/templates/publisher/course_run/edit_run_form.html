@@ -87,7 +87,7 @@
                     <div class="col col-6">
                             <label class="field-label ">{% trans "Course Pacing" %}  <span class="required">*</span></label>
                             {% if course_run.lms_pacing %}
-                                <div>{{ course_run.lms_pacing }}</div>
+                                <div>{{ course_run.lms_pacing_type_display }}</div>
                             {% else %}
                                 {% trans "Not yet created" %}
                             {% endif %}
