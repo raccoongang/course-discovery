@@ -1,9 +1,11 @@
 import logging
 import math
 
+import waffle
 from opaque_keys.edx.keys import CourseKey
 
 from course_discovery.apps.core.utils import serialize_datetime
+from course_discovery.apps.publisher.constants import PUBLISHER_REMOVE_PACING_TYPE_EDITING
 
 logger = logging.getLogger(__name__)
 
@@ -56,19 +58,34 @@ class StudioAPI:
         else:
             logger.warning('No course team admin specified for course [%s]. This may result in a Studio '
                            'course run being created without a course team.', course.number)
-
-        return {
-            'title': publisher_course_run.title_override or course.title,
-            'org': course.organizations.first().key,
-            'number': course.number,
-            'run': cls.calculate_course_run_key_run_value(publisher_course_run),
-            'schedule': {
-                'start': serialize_datetime(publisher_course_run.start),
-                'end': serialize_datetime(publisher_course_run.end),
-            },
-            'team': team,
-            'pacing_type': publisher_course_run.lms_pacing,
-        }
+        # Note for Farhanah: I commented this out, since I need access to the request object, and I don't
+        # from here, which makes this condition implode
+        # if waffle.flag_is_active(PUBLISHER_REMOVE_PACING_TYPE_EDITING):
+        #     return {
+        #         'title': publisher_course_run.title_override or course.title,
+        #         'org': course.organizations.first().key,
+        #         'number': course.number,
+        #         'run': cls.calculate_course_run_key_run_value(publisher_course_run),
+        #         'schedule': {
+        #             'start': serialize_datetime(publisher_course_run.start),
+        #             'end': serialize_datetime(publisher_course_run.end),
+        #         },
+        #         'team': team,
+        #         'pacing_type': publisher_course_run.lms_pacing,
+        #     }
+        # else:
+            return {
+                'title': publisher_course_run.title_override or course.title,
+                'org': course.organizations.first().key,
+                'number': course.number,
+                'run': cls.calculate_course_run_key_run_value(publisher_course_run),
+                'schedule': {
+                    'start': serialize_datetime(publisher_course_run.start),
+                    'end': serialize_datetime(publisher_course_run.end),
+                },
+                'team': team,
+                'pacing_type': publisher_course_run.pacing_type,
+            }
 
     def create_course_rerun_in_studio(self, publisher_course_run, discovery_course_run):
         data = self.generate_data_for_studio_api(publisher_course_run)

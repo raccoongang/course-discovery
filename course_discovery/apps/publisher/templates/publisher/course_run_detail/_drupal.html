@@ -99,7 +99,15 @@
             {% trans "Self Paced" %}
             {% include "publisher/course_run_detail/_clipboard.html" %}
         </div>
-        <div class="copy">{{ course_run.lms_pacing }}</div>
+        <div class="copy">
+            {{
+                {% if publisher_remove_pacing_type_editing %}
+                    course_run.lms_pacing
+                {% else %}
+                    course_run.pacing_type
+                {% endif %}
+            }}
+        </div>
     </div>
     <div class="info-item">
         <div class="heading">

@@ -462,14 +462,6 @@ class CourseRun(TimeStampedModel, ChangedByMixin):
         else:
             return self.lms_pacing
 
-    @property
-    def is_self_paced(self):
-        return True if self.lms_pacing == 'self' else False
-
-    @property
-    def is_instructor_paced(self):
-        return True if self.lms_pacing == 'instructor' else False
-
 
 class Seat(TimeStampedModel, ChangedByMixin):
     HONOR = 'honor'

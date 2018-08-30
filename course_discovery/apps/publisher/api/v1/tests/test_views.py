@@ -84,7 +84,6 @@ class CourseRunViewSetTests(APITestCase):
             root=partner.lms_url.strip('/'),
             key=publisher_course_run.lms_course_id
         )
-        # import pdb; pdb.set_trace()
         responses.add(responses.GET, url, json=body, status=200)
 
 
@@ -131,7 +130,7 @@ class CourseRunViewSetTests(APITestCase):
             log.check((LOGGER_NAME, 'INFO',
                        'Published course run with id: [{}] lms_course_id: [{}], user: [{}], date: [{}]'.format(
                            publisher_course_run.id, publisher_course_run.lms_course_id, self.user, date.today())))
-        # import pdb; pdb.set_trace()
+
         assert len(responses.calls) == 5
         expected = {
             'discovery': CourseRunViewSet.PUBLICATION_SUCCESS_STATUS,

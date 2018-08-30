@@ -2,6 +2,7 @@ import logging
 from collections import OrderedDict
 from datetime import date
 
+import waffle
 from edx_rest_api_client.client import EdxRestApiClient
 from edx_rest_framework_extensions.authentication import JwtAuthentication
 from rest_framework import permissions, serializers, status, viewsets
@@ -20,6 +21,7 @@ from course_discovery.apps.publisher.api.utils import (
 )
 from course_discovery.apps.publisher.models import CourseRun, Seat
 from course_discovery.apps.publisher.studio_api_utils import StudioAPI
+from course_discovery.apps.publisher.constants import PUBLISHER_REMOVE_PACING_TYPE_EDITING
 
 logger = logging.getLogger(__name__)
 
@@ -144,17 +146,32 @@ class CourseRunViewSet(viewsets.GenericViewSet):
         discovery_course.subjects.clear()
         discovery_course.subjects.add(*subjects)
 
-        defaults = {
-            'start': course_run.start,
-            'end': course_run.end,
-            'pacing_type': course_run.lms_pacing,
-            'title_override': course_run.title_override,
-            'min_effort': course_run.min_effort,
-            'max_effort': course_run.max_effort,
-            'language': course_run.language,
-            'weeks_to_complete': course_run.length,
-            'learner_testimonials': publisher_course.learner_testimonial,
-        }
+        if waffle.flag_is_active(self.request, PUBLISHER_REMOVE_PACING_TYPE_EDITING):
+            defaults = {
+                'start': course_run.start,
+                'end': course_run.end,
+                'pacing_type': course_run.lms_pacing,
+                'title_override': course_run.title_override,
+                'min_effort': course_run.min_effort,
+                'max_effort': course_run.max_effort,
+                'language': course_run.language,
+                'weeks_to_complete': course_run.length,
+                'learner_testimonials': publisher_course.learner_testimonial,
+            }
+        else:
+            defaults = {
+                'start': course_run.start,
+                'end': course_run.end,
+                'pacing_type': course_run.pacing_type,
+                'title_override': course_run.title_override,
+                'min_effort': course_run.min_effort,
+                'max_effort': course_run.max_effort,
+                'language': course_run.language,
+                'weeks_to_complete': course_run.length,
+                'learner_testimonials': publisher_course.learner_testimonial,
+            }
+
+
         discovery_course_run, __ = DiscoveryCourseRun.objects.update_or_create(
             course=discovery_course,
             key=course_run.lms_course_id,

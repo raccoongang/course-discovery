@@ -79,19 +79,29 @@
                 <div class="field-title">{% trans "COURSE PACING" %} <span class="required float-right">* Required for review</span></div>
                 <div class="row">
                     <div class="col col-6 help-text">
-                        <p>
-                            {% trans "The pacing type for this course." %} 
-                            <a class="studio-pacing-link" href="{{ course_run.studio_schedule_and_details_url }}" target="_blank">{% trans "You can edit the course pacing type in Studio." %}</a>
-                        </p>
+                        {% if publisher_remove_pacing_type_editing %}
+                            <p>
+                                {% trans "The pacing type for this course." %}
+                                <a class="studio-pacing-link" href="{{ course_run.studio_schedule_and_details_url }}" target="_blank">{% trans "You can edit the course pacing type in Studio." %}</a>
+                            </p>
+                        {% else %}
+                            <p>{% trans "Instructor-paced courses include individual assignments that have specific due dates before the course end date." %} </p>
+                            <p>{% trans "Self-paced courses do not have individual assignments that have specific due dates before the course end date. All assignments are due on the course end date." %}</p>
+                        {% endif %}
                     </div>
                     <div class="col col-6">
+                        {% if publisher_remove_pacing_type_editing %}
                             <label class="field-label ">{% trans "Course Pacing" %}  <span class="required">*</span></label>
                             {% if course_run.lms_pacing %}
                                 <div>{{ course_run.lms_pacing_type_display }}</div>
                             {% else %}
                                 {% trans "Not yet created" %}
                             {% endif %}
-                        </div>
+                        {% else %}
+                            <label class="field-label">{{ run_form.pacing_type.label_tag }}  <span class="required">*</span></label>
+                            <div class="checkbox-inline">{{ run_form.pacing_type }}</div>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div class="field-title">{% trans "STUDIO URL" %} <span class="required float-right">* Required for review</span></div>

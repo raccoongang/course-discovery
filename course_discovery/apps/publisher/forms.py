@@ -12,10 +12,11 @@ from django.utils.translation import ugettext_lazy as _
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
 
+from course_discovery.apps.course_metadata.choices import CourseRunPacing
 from course_discovery.apps.course_metadata.models import LevelType, Organization, Person, Subject
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 from course_discovery.apps.publisher.choices import CourseRunStateChoices, PublisherUserRole
-from course_discovery.apps.publisher.constants import PUBLISHER_CREATE_AUDIT_SEATS_FOR_VERIFIED_COURSE_RUNS
+from course_discovery.apps.publisher.constants import (PUBLISHER_CREATE_AUDIT_SEATS_FOR_VERIFIED_COURSE_RUNS, PUBLISHER_REMOVE_PACING_TYPE_EDITING)
 from course_discovery.apps.publisher.mixins import LanguageModelSelect2Multiple, get_user_organizations
 from course_discovery.apps.publisher.models import (
     Course, CourseEntitlement, CourseRun, CourseRunState, CourseState, CourseUserRole, OrganizationExtension,
@@ -246,6 +247,13 @@ class CourseRunForm(BaseForm):
             choices=((1, _("Yes")), (0, _("No")))), initial=0, required=False
     )
 
+    pacing_type = forms.ChoiceField(
+        label=_('Pacing'),
+        widget=forms.RadioSelect,
+        choices=CourseRunPacing.choices,
+        required=False
+    )
+
     transcript_languages = forms.ModelMultipleChoiceField(
         queryset=LanguageTag.objects.all(),
         label=_('Transcript Languages'),
@@ -288,11 +296,19 @@ class CourseRunForm(BaseForm):
 
     class Meta:
         model = CourseRun
-        fields = (
-            'length', 'transcript_languages', 'language', 'min_effort', 'max_effort', 'target_content',
-            'video_language', 'staff', 'start', 'end', 'is_xseries', 'xseries_name', 'is_professional_certificate',
-            'professional_certificate_name', 'is_micromasters', 'micromasters_name', 'lms_course_id',
-        )
+
+        if waffle.switch_is_active(PUBLISHER_REMOVE_PACING_TYPE_EDITING):
+            fields = (
+                'length', 'transcript_languages', 'language', 'min_effort', 'max_effort', 'target_content',
+                'video_language', 'staff', 'start', 'end', 'is_xseries', 'xseries_name', 'is_professional_certificate',
+                'professional_certificate_name', 'is_micromasters', 'micromasters_name', 'lms_course_id',
+            )
+        else:
+            fields = (
+                'length', 'transcript_languages', 'language', 'min_effort', 'max_effort', 'target_content', 'pacing_type',
+                'video_language', 'staff', 'start', 'end', 'is_xseries', 'xseries_name', 'is_professional_certificate',
+                'professional_certificate_name', 'is_micromasters', 'micromasters_name', 'lms_course_id',
+            )
 
     def save(self, commit=True, course=None, changed_by=None):  # pylint: disable=arguments-differ
         course_run = super(CourseRunForm, self).save(commit=False)

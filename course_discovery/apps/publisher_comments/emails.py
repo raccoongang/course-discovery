@@ -1,5 +1,6 @@
 import logging
 
+import waffle
 from django.conf import settings
 from django.core.mail.message import EmailMultiAlternatives
 from django.template.loader import get_template
@@ -9,6 +10,7 @@ from opaque_keys.edx.keys import CourseKey
 
 from course_discovery.apps.publisher.models import CourseRun
 from course_discovery.apps.publisher.utils import is_email_notification_enabled
+from course_discovery.apps.publisher.constants import PUBLISHER_REMOVE_PACING_TYPE_EDITING
 
 log = logging.getLogger(__name__)
 
@@ -39,15 +41,16 @@ def send_email_for_comment(comment, created=False):
             # Translators: subject_desc will be choice from ('New comment added', 'Comment updated'),
             # 'pacing_type' will be choice from ('instructor-paced', 'self-paced'),
             # 'title' and 'start' will be the value of course title & start date fields.
+            pacing_type = publisher_obj.lms_pacing_type_display if waffle.flag_is_active(PUBLISHER_REMOVE_PACING_TYPE_EDITING) else publisher_obj.get_pacing_type_display()
             subject = _('{subject_desc} {title} {start} - {pacing_type}').format(  # pylint: disable=no-member
                 subject_desc=subject_desc,
                 title=course.title,
-                pacing_type=publisher_obj.lms_pacing_type_display,
+                pacing_type=pacing_type,
                 start=publisher_obj.start.strftime('%B %d, %Y') if publisher_obj.start else ''
             )
             course_name = '{title} {start} - {pacing_type}'.format(
                 title=course.title,
-                pacing_type=publisher_obj.lms_pacing_type_display,
+                pacing_type=pacing_type,
                 start=publisher_obj.start.strftime('%B %d, %Y') if publisher_obj.start else ''
             )
         else:
