@@ -77,6 +77,16 @@ class CourseRunViewSetTests(APITestCase):
             key=publisher_course_run.lms_course_id
         )
         responses.add(responses.POST, url, json=body, status=200)
+        body = {
+            'pacing': 'self'
+        }
+        url = '{root}/api/courses/v1/courses/{key}/'.format(
+            root=partner.lms_url.strip('/'),
+            key=publisher_course_run.lms_course_id
+        )
+        # import pdb; pdb.set_trace()
+        responses.add(responses.GET, url, json=body, status=200)
+
 
     def _mock_ecommerce_api(self, publisher_course_run, status=200, body=None):
         partner = publisher_course_run.course.organizations.first().partner
@@ -121,7 +131,8 @@ class CourseRunViewSetTests(APITestCase):
             log.check((LOGGER_NAME, 'INFO',
                        'Published course run with id: [{}] lms_course_id: [{}], user: [{}], date: [{}]'.format(
                            publisher_course_run.id, publisher_course_run.lms_course_id, self.user, date.today())))
-        assert len(responses.calls) == 3
+        # import pdb; pdb.set_trace()
+        assert len(responses.calls) == 5
         expected = {
             'discovery': CourseRunViewSet.PUBLICATION_SUCCESS_STATUS,
             'ecommerce': CourseRunViewSet.PUBLICATION_SUCCESS_STATUS,
@@ -130,7 +141,7 @@ class CourseRunViewSetTests(APITestCase):
         assert response.data == expected
 
         # Verify the correct deadlines were sent to the E-Commerce API
-        ecommerce_body = json.loads(responses.calls[2].request.body)
+        ecommerce_body = json.loads(responses.calls[4].request.body)
         expected = [
             serialize_seat_for_ecommerce_api(audit_seat),
             serialize_seat_for_ecommerce_api(professional_seat),
@@ -154,7 +165,7 @@ class CourseRunViewSetTests(APITestCase):
         assert discovery_course_run.full_description_override is None
         assert discovery_course_run.start == publisher_course_run.start
         assert discovery_course_run.end == publisher_course_run.end
-        assert discovery_course_run.pacing_type == publisher_course_run.pacing_type
+        assert discovery_course_run.pacing_type == publisher_course_run.lms_pacing
         assert discovery_course_run.min_effort == publisher_course_run.min_effort
         assert discovery_course_run.max_effort == publisher_course_run.max_effort
         assert discovery_course_run.language == publisher_course_run.language
