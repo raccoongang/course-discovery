@@ -338,7 +338,7 @@ class ProgramIndex(BaseIndex, indexes.Indexable, OrganizationsMixin):
         return [degree.search_card_ranking, degree.search_card_cost, degree.search_card_courses]
 
 
-class DegreeIndex(ProgramIndex):
+class DegreeIndex(BaseIndex):
     model = Degree
     search_card_display = indexes.MultiValueField()
 
