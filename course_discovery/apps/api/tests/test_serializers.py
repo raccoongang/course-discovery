@@ -1542,13 +1542,15 @@ class TestProgramSearchSerializer(TestCase):
         Fields = [quick_facts]
         """
         import pprint
-        # program = ProgramFactory()
-        degree = DegreeSearchFactory()
+        program = ProgramFactory()
+        degree = DegreeFactory(program_ptr=program)
+        # degree.program_ptr = program
         result = SearchQuerySet().models(Program).filter(uuid=degree.uuid)[0]
         serializer = self.serializer_class(result, context={'request': self.request})
-        # pprint.pprint(serializer.data)
-        expected = self.get_expected_degree_data(degree, self.request)
 
+        expected = self.get_expected_degree_data(degree, self.request)
+        pprint.pprint(serializer.data)
+        pprint.pprint(expected)
         assert serializer.data == expected
 
 
