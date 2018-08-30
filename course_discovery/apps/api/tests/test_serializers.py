@@ -1486,7 +1486,7 @@ class TestProgramSearchSerializer(TestCase):
         }
 
     @classmethod
-    def get_expected_degree_data(cls, degree, request):  # pylint: disable=unused-argument
+    def get_expected_degree_data(cls, program, degree, request):  # pylint: disable=unused-argument
         expected = cls.get_expected_data(degree, request)
         if expected['content_type'] != 'degree':
             # Handler for inhereted test ProgramSearchModelSerializerTest
@@ -1541,13 +1541,24 @@ class TestProgramSearchSerializer(TestCase):
         Verify that degree data is serialized
         Fields = [quick_facts]
         """
-        import pprint
-        program = ProgramFactory()
-        degree = DegreeSearchFactory(program_ptr=program)
+        # # program = ProgramFactory()
+        # degree = DegreeSearchFactory()
+        # degree.uuid = degree.program_ptr.uuid
+        # # degree.program_ptr = program
+        degree = DegreeFactory()
         # degree.program_ptr = program
-        result = SearchQuerySet().models(Program).filter(uuid=program.uuid)[0]
-        serializer = self.serializer_class(result, context={'request': self.request})
+        # degree.search_card_ranking = 'test_ranking',
+        # degree.search_card_cost = 'test_cost',
+        # degree.search_card_courses = 'test_courses'
 
+        import pprint
+        # # program = ProgramFactory()
+        # degree = DegreeSearchFactory()
+        # print(degree.search_card_cost)
+        # # degree.program_ptr = program
+        result = SearchQuerySet().models(Program).filter(uuid=degree.program_ptr.uuid)[0]
+        serializer = self.serializer_class(result, context={'request': self.request})
+        #
         expected = self.get_expected_degree_data(degree, self.request)
         pprint.pprint(serializer.data)
         pprint.pprint(expected)

@@ -342,102 +342,6 @@ class ProgramFactory(factory.django.DjangoModelFactory):
             add_m2m_data(self.instructor_ordering, extracted)
 
 
-class DegreeSearchFactory(AbstractNamedModelFactory):
-    class Meta(object):
-        model = Degree
-        # exclude = ('program_ptr',)
-
-    # created = FuzzyDateTime(datetime.datetime(2014, 1, 1, tzinfo=UTC))
-    search_card_ranking = FuzzyText()
-    search_card_cost = FuzzyText()
-    search_card_courses = FuzzyText()
-
-    program_ptr = factory.SubFactory(ProgramFactory)
-    #
-    # # @factory.post_generation
-    # # def cre
-    # def program_ptr(self, create, extracted, **kwargs):
-    #     self.program_ptr = profra(self.program_ptr, *extracted)
-    #     self.created(self.created, *extracted)
-         # = ProgramFactory()
-        #
-        # title = factory.Sequence(lambda n: 'test-program-{}'.format(n))  # pylint: disable=unnecessary-lambda
-    # uuid = program_ptr.uuid
-    # subtitle = FuzzyText()
-    # type = factory.SubFactory(ProgramTypeFactory)
-    # status = ProgramStatus.Active
-    # marketing_slug = factory.Sequence(lambda n: 'test-slug-{}'.format(n))  # pylint: disable=unnecessary-lambda
-    # banner_image_url = FuzzyText(prefix='https://example.com/program/banner')
-    # card_image_url = FuzzyText(prefix='https://example.com/program/card')
-    partner = factory.SubFactory(PartnerFactory)
-    # video = factory.SubFactory(VideoFactory)
-    # overview = FuzzyText()
-    # total_hours_of_effort = FuzzyInteger(2)
-    # weeks_to_complete = FuzzyInteger(1)
-    # min_hours_effort_per_week = FuzzyInteger(2)
-    # max_hours_effort_per_week = FuzzyInteger(4)
-    # credit_redemption_overview = FuzzyText()
-    # order_courses_by_start_date = True
-    # hidden = False
-    #
-    # @factory.post_generation
-    # def courses(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.courses, extracted)
-    #
-    # @factory.post_generation
-    # def excluded_course_runs(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.excluded_course_runs, extracted)
-    #
-    # @factory.post_generation
-    # def authoring_organizations(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.authoring_organizations, extracted)
-    #
-    # @factory.post_generation
-    # def corporate_endorsements(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.corporate_endorsements, extracted)
-    #
-    # @factory.post_generation
-    # def credit_backing_organizations(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.credit_backing_organizations, extracted)
-    #
-    # @factory.post_generation
-    # def expected_learning_items(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.expected_learning_items, extracted)
-    #
-    # @factory.post_generation
-    # def faq(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.faq, extracted)
-    #
-    # @factory.post_generation
-    # def individual_endorsements(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.individual_endorsements, extracted)
-    #
-    # @factory.post_generation
-    # def job_outlook_items(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.job_outlook_items, extracted)
-    #
-    # @factory.post_generation
-    # def instructor_ordering(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.instructor_ordering, extracted)
-    #
-    # # @factory.post_generation
-    # # def search_card_ranking(self, create, extracted, **kwargs):
-    # #     text = FuzzyText()
-    # #     setattr(self, 'search_card_ranking', text)
-    # #     setattr(self, 'search_card_cost', FuzzyText())
-    # #     setattr(self, 'search_card_courses', FuzzyText())
-
-
 class DegreeFactory(ProgramFactory):
     class Meta(object):
         model = Degree
@@ -460,10 +364,37 @@ class DegreeFactory(ProgramFactory):
             add_m2m_data(self.rankings, extracted)
 
 
+class DegreeSearchFactory(DegreeFactory):
+    # class Meta(object):
+    #     model = Program
+    # created = datetime.datetime(2014, 1, 1, tzinfo=UTC)
+    # type = factory.SubFactory(ProgramTypeFactory)
+    program_ptr = factory.SubFactory(ProgramFactory)
+    # partner = factory.SubFactory(PartnerFactory)
+    # search_card_ranking = 'test_ranking',
+    # search_card_cost = 'test_cost',
+    # search_card_courses = 'test_courses'
+    # uuid = program_ptr.uuid
     # @factory.post_generation
-    # def search_card_ranking(self, create, extracted, **kwargs):
-    #     if create:  # pragma: no cover
-    #         add_m2m_data(self.rankings, extracted)
+
+    # @factory.post_generation
+    # def program_ptr(self, create, extracted, **kwargs):
+    #     self.program_ptr = kwargs.get('program_ptr')
+
+    # program_ptr = factory.SubFactory(ProgramFactory)
+    # degree = factory.SubFactory(DegreeFactory)
+    # def __init__(self, program):
+    #     self.created =
+        # self.program = program
+
+    # def create(self):
+    #     return Degree.objects.create(
+    #         program_ptr=self.program,
+    #         created=datetime.datetime(2014, 1, 1, tzinfo=UTC),
+            # partner=PartnerFactory()
+        # )
+
+        # return self.degree
 
 
 class IconTextPairingFactory(factory.django.DjangoModelFactory):
