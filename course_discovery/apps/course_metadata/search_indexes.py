@@ -337,20 +337,3 @@ class ProgramIndex(BaseIndex, indexes.Indexable, OrganizationsMixin):
 
             return []
         return [degree.search_card_ranking, degree.search_card_cost, degree.search_card_courses]
-
-
-# class DegreeIndex(BaseIndex):
-#     model = Degree
-# #     search_card_ranking = indexes.CharField(model_attr='search_card_ranking')
-# #     search_card_courses = indexes.CharField(model_attr='search_card_courses')
-# #     search_card_cost = indexes.CharField(model_attr='search_card_cost')
-#     search_card_display = indexes.MultiValueField()
-# #
-#     def prepare_search_card_display(self, obj):
-#         return [obj.search_card_ranking, obj.search_card_cost, obj.search_card_courses]
-# #
-# #     def prepare_aggregation_key(self, obj):
-# #         return 'program:{}'.format(obj.uuid)
-# #
-# #     def prepare_published(self, obj):
-# #         return obj.status == ProgramStatus.Active

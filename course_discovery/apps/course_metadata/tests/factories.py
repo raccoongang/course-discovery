@@ -364,39 +364,6 @@ class DegreeFactory(ProgramFactory):
             add_m2m_data(self.rankings, extracted)
 
 
-class DegreeSearchFactory(DegreeFactory):
-    # class Meta(object):
-    #     model = Program
-    # created = datetime.datetime(2014, 1, 1, tzinfo=UTC)
-    # type = factory.SubFactory(ProgramTypeFactory)
-    program_ptr = factory.SubFactory(ProgramFactory)
-    # partner = factory.SubFactory(PartnerFactory)
-    # search_card_ranking = 'test_ranking',
-    # search_card_cost = 'test_cost',
-    # search_card_courses = 'test_courses'
-    # uuid = program_ptr.uuid
-    # @factory.post_generation
-
-    # @factory.post_generation
-    # def program_ptr(self, create, extracted, **kwargs):
-    #     self.program_ptr = kwargs.get('program_ptr')
-
-    # program_ptr = factory.SubFactory(ProgramFactory)
-    # degree = factory.SubFactory(DegreeFactory)
-    # def __init__(self, program):
-    #     self.created =
-        # self.program = program
-
-    # def create(self):
-    #     return Degree.objects.create(
-    #         program_ptr=self.program,
-    #         created=datetime.datetime(2014, 1, 1, tzinfo=UTC),
-            # partner=PartnerFactory()
-        # )
-
-        # return self.degree
-
-
 class IconTextPairingFactory(factory.django.DjangoModelFactory):
     class Meta(object):
         model = IconTextPairing

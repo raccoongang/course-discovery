@@ -1485,19 +1485,6 @@ class TestProgramSearchSerializer(TestCase):
             'search_card_display': []
         }
 
-    @classmethod
-    def get_expected_degree_data(cls, program, degree, request):  # pylint: disable=unused-argument
-        expected = cls.get_expected_data(degree, request)
-        if expected['content_type'] != 'degree':
-            # Handler for inhereted test ProgramSearchModelSerializerTest
-            expected['content_type'] = 'degree'
-            expected['search_card_display'] = [
-                degree.search_card_ranking,
-                degree.search_card_cost,
-                degree.search_card_courses
-            ]
-        return expected
-
     def serialize_program(self, program, request):
         """ Serializes the given `Program` as a search result. """
         result = SearchQuerySet().models(Program).filter(uuid=program.uuid)[0]
@@ -1536,34 +1523,6 @@ class TestProgramSearchSerializer(TestCase):
         else:
             assert {'en-us', 'zh-cmn'} == {*expected['languages']}
 
-    def test_data_degree(self):
-        """
-        Verify that degree data is serialized
-        Fields = [quick_facts]
-        """
-        # # program = ProgramFactory()
-        # degree = DegreeSearchFactory()
-        # degree.uuid = degree.program_ptr.uuid
-        # # degree.program_ptr = program
-        degree = DegreeFactory()
-        # degree.program_ptr = program
-        # degree.search_card_ranking = 'test_ranking',
-        # degree.search_card_cost = 'test_cost',
-        # degree.search_card_courses = 'test_courses'
-
-        import pprint
-        # # program = ProgramFactory()
-        # degree = DegreeSearchFactory()
-        # print(degree.search_card_cost)
-        # # degree.program_ptr = program
-        result = SearchQuerySet().models(Program).filter(uuid=degree.program_ptr.uuid)[0]
-        serializer = self.serializer_class(result, context={'request': self.request})
-        #
-        expected = self.get_expected_degree_data(degree, self.request)
-        pprint.pprint(serializer.data)
-        pprint.pprint(expected)
-        assert serializer.data == expected
-
 
 class ProgramSearchModelSerializerTest(TestProgramSearchSerializer):
     serializer_class = ProgramSearchModelSerializer
@@ -1573,46 +1532,6 @@ class ProgramSearchModelSerializerTest(TestProgramSearchSerializer):
         expected = ProgramSerializerTests.get_expected_data(program, request)
         expected.update({'content_type': 'program'})
         return expected
-
-    @classmethod
-    def get_expected_degree_data(cls, degree, request):
-        expected = cls.get_expected_data(degree, request)
-        expected.update({
-            'content_type': 'degree',
-            'degree': OrderedDict([
-                ('application_requirements', degree.application_requirements),
-                ('apply_url', degree.apply_url),
-                ('campus_image', None),
-                ('title_background_image', None),
-                ('campus_image_desktop', None),
-                ('campus_image_mobile', None),
-                ('campus_image_tablet', None),
-                ('costs', []),
-                ('curriculum', None),
-                ('deadlines', []),
-                ('lead_capture_list_name', degree.lead_capture_list_name),
-                ('quick_facts', []),
-                ('overall_ranking', degree.overall_ranking),
-                ('prerequisite_coursework', degree.prerequisite_coursework),
-                ('rankings', []),
-                ('lead_capture_image', {}),
-                ('micromasters_url', degree.micromasters_url),
-                ('micromasters_long_title', degree.micromasters_long_title),
-                ('micromasters_long_description', degree.micromasters_long_description),
-                ('costs_fine_print', degree.costs_fine_print),
-                ('deadlines_fine_print', degree.deadlines_fine_print)
-            ])
-        })
-        expected['video']['src'] = degree.video.src
-        return expected
-
-    def test_data_degree(self):
-        """
-        Overridden inherited test in this class. The primary search mechanism
-        for `Degrees` is on the inherited Program model.
-        The DegreeFactory doesn't index in search during unit testing.
-        """
-        pass
 
 
 @pytest.mark.django_db

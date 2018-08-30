@@ -1423,7 +1423,6 @@ class AggregateSearchSerializer(HaystackSerializer):
             search_indexes.CourseRunIndex: CourseRunSearchSerializer,
             search_indexes.CourseIndex: CourseSearchSerializer,
             search_indexes.ProgramIndex: ProgramSearchSerializer,
-            # search_indexes.DegreeIndex: ProgramSearchSerializer
         }
 
 
