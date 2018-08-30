@@ -1543,9 +1543,9 @@ class TestProgramSearchSerializer(TestCase):
         """
         import pprint
         program = ProgramFactory()
-        degree = DegreeFactory(program_ptr=program)
+        degree = DegreeSearchFactory(program_ptr=program)
         # degree.program_ptr = program
-        result = SearchQuerySet().models(Program).filter(uuid=degree.uuid)[0]
+        result = SearchQuerySet().models(Program).filter(uuid=program.uuid)[0]
         serializer = self.serializer_class(result, context={'request': self.request})
 
         expected = self.get_expected_degree_data(degree, self.request)

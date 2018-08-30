@@ -342,33 +342,34 @@ class ProgramFactory(factory.django.DjangoModelFactory):
             add_m2m_data(self.instructor_ordering, extracted)
 
 
-class DegreeSearchFactory(factory.django.DjangoModelFactory):
+class DegreeSearchFactory(AbstractNamedModelFactory):
     class Meta(object):
         model = Degree
-        exclude = ('program_ptr',)
+        # exclude = ('program_ptr',)
 
-    created = FuzzyDateTime(datetime.datetime(2014, 1, 1, tzinfo=UTC))
+    # created = FuzzyDateTime(datetime.datetime(2014, 1, 1, tzinfo=UTC))
     search_card_ranking = FuzzyText()
     search_card_cost = FuzzyText()
     search_card_courses = FuzzyText()
 
     program_ptr = factory.SubFactory(ProgramFactory)
-
-    # @factory.post_generation
+    #
+    # # @factory.post_generation
+    # # def cre
     # def program_ptr(self, create, extracted, **kwargs):
-    #     self.add(self.program_ptr, *extracted)
+    #     self.program_ptr = profra(self.program_ptr, *extracted)
     #     self.created(self.created, *extracted)
          # = ProgramFactory()
         #
         # title = factory.Sequence(lambda n: 'test-program-{}'.format(n))  # pylint: disable=unnecessary-lambda
-    # uuid = factory.LazyFunction(uuid4)
+    # uuid = program_ptr.uuid
     # subtitle = FuzzyText()
     # type = factory.SubFactory(ProgramTypeFactory)
     # status = ProgramStatus.Active
     # marketing_slug = factory.Sequence(lambda n: 'test-slug-{}'.format(n))  # pylint: disable=unnecessary-lambda
     # banner_image_url = FuzzyText(prefix='https://example.com/program/banner')
     # card_image_url = FuzzyText(prefix='https://example.com/program/card')
-    # partner = factory.SubFactory(PartnerFactory)
+    partner = factory.SubFactory(PartnerFactory)
     # video = factory.SubFactory(VideoFactory)
     # overview = FuzzyText()
     # total_hours_of_effort = FuzzyInteger(2)
