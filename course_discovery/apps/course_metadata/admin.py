@@ -125,7 +125,7 @@ class ProgramAdmin(admin.ModelAdmin):
         'min_hours_effort_per_week', 'max_hours_effort_per_week', 'courses', 'order_courses_by_start_date',
         'custom_course_runs_display', 'excluded_course_runs', 'authoring_organizations',
         'credit_backing_organizations', 'one_click_purchase_enabled', 'hidden', 'corporate_endorsements', 'faq',
-        'individual_endorsements',
+        'individual_endorsements', 'price', 'currency'
     )
     fields += filter_horizontal
     save_error = False
