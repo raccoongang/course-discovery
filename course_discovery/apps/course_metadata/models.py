@@ -282,6 +282,16 @@ class Course(TimeStampedModel):
             'Course number format e.g CS002x, BIO1.1x, BIO1.2x'
         )
     )
+    program_duration = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text=_(
+            'Course duration respected during automated programs generation.'
+        )
+    )
+    program_type = models.CharField(
+        max_length=255, null=True, blank=True, help_text=_(
+            'Course special type to explicitly include/exclude during automated programs generation.'
+        )
+    )
 
     objects = CourseQuerySet.as_manager()
 
