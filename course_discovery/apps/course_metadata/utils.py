@@ -1,14 +1,22 @@
+import logging
 import random
 import string
+from collections import Counter
+from functools import reduce
+from itertools import combinations, chain
+from pprint import pformat
 
 import requests
 from django.utils.functional import cached_property
 from stdimage.models import StdImageFieldFile
 from stdimage.utils import UploadTo
 
+from course_discovery.apps.course_metadata.constants import RULES_PROGRAM_TYPE_NAME, PROGRAM_RULES
 from course_discovery.apps.course_metadata.exceptions import MarketingSiteAPIClientException
 
 RESERVED_ELASTICSEARCH_QUERY_OPERATORS = ('AND', 'OR', 'NOT', 'TO',)
+
+logger = logging.getLogger(__name__)
 
 
 def clean_query(query):
@@ -148,3 +156,125 @@ class MarketingSiteAPIClient(object):
             'Content-Type': 'application/json',
             'X-CSRF-Token': self.csrf_token,
         }
+
+
+def make_bundles():
+    """
+    Automated programs creation (based on specified rules).
+
+    See: course_metadata.constants
+    """
+    from course_discovery.apps.course_metadata.models import Course, Program, ProgramType
+
+    def get_courses_data():
+        courses_data = []
+        courses = Course.objects.exclude(program_duration__isnull=True)
+
+        for course in courses:
+            course_item = {
+                'name': course.title,
+                'duration': course.program_duration,
+            }
+            if course.program_type is not None:
+                course_item['type'] = course.program_type
+            courses_data.append(course_item)
+
+        return courses_data
+
+    def process_rules(rules):
+        rule_bundles = {}
+        logger.debug('Getting courses data...')
+        courses_data = get_courses_data()
+        logger.info('...found {} course(s) for bundling.'.format(len(courses_data)))
+
+        logger.info('Processing rules...')
+        logger.debug('*' * 120)
+        for i, rule in enumerate(rules, 1):
+            # if i <= 3: continue
+            if i > 3: break
+            logger.debug('...applying rule {}'.format(i))
+            bundles = apply_rule(rule, courses_data)
+            rule_bundles[rule['name']] = bundles
+        logger.info(
+            'Total count of possible bundles: %d',
+            reduce(lambda x, y: x + len(y), rule_bundles.values(), 0)
+        )
+        return rule_bundles
+
+    def apply_rule(rule, courses):
+        assert isinstance(rule, dict)
+        specials = {}
+        rule_dict = rule.copy()
+        rule_name = rule_dict.pop('name')
+        for key in rule.keys():
+            if isinstance(key, str) and key != 'name':
+                specials[key] = rule_dict.pop(key)
+        total_hours = reduce(lambda x, y: x + y[0] * y[1], rule_dict.items(), 0)
+        total_courses = sum(rule_dict.values())
+
+        logger.debug('- rule {}: "{}"'.format(rule_name, rule_dict))
+        logger.debug(
+            '- special restrictions: {}'.format(len(specials) and '%d (%s)' % (len(specials), specials))
+        )
+        logger.debug('- total bundle hours: {}'.format(total_hours))
+        logger.debug('- courses in bundle: {}'.format(total_courses))
+        logger.debug('processing...')
+
+        target_courses_list = list(filter_courses(courses, rule_dict, specials))
+
+        logger.debug(
+            'Forming from: %d course(s): \n%s', len(target_courses_list), pformat(target_courses_list)
+        )
+        logger.debug('-' * 120)
+
+        combs_list = compute_combinations(target_courses_list, total_courses)
+        logger.debug('...there %d combination(s) in total...', len(combs_list))
+
+        # filtering course combinations based on rule's duration formula:
+        def remove_redundant(combination):
+            counter = Counter(map(lambda c: c['duration'], combination))
+            etalon = Counter(rule_dict)
+            return counter == etalon
+
+        bundles_list = list(filter(remove_redundant, combs_list))
+        logger.debug('...there %d combination(s) after rule comparison...', len(bundles_list))
+
+        # processing `required` course type rule:
+        def remove_required(combination):
+            return bool(set(map(lambda c: c.get('type'), combination)).intersection(required_types_list))
+
+        required_types_list = list(filter(lambda k: specials[k], specials.keys()))
+        if required_types_list:
+            bundles_list = list(filter(remove_required, bundles_list))
+            logger.debug('...there %d combination(s) after `required` rule applying...', len(bundles_list))
+
+        logger.debug('Bundles created [%d]: \n%s', len(bundles_list), pformat(bundles_list))
+        return bundles_list
+
+    def filter_courses(courses, rule_dict, specials):
+        filter_duration = filter(lambda c: c['duration'] in rule_dict.keys(), courses)
+        filter_specials = filter(
+            lambda c: c.get('type') is None or not bool(specials) or specials[c.get('type')],
+            filter_duration
+        )
+        return filter_specials
+
+    def compute_combinations(courses, r):
+        return list(combinations(courses, r))
+
+    logger.debug('Preparing for programs creation...')
+
+    p_type, created = ProgramType.objects.get_or_create(name=RULES_PROGRAM_TYPE_NAME)
+    if created:
+        logger.debug(
+            '...new ProgramType [name={}] created for `auto` programs'.format(RULES_PROGRAM_TYPE_NAME)
+        )
+        logger.debug('...so, there are no `auto` programs yet')
+    else:
+        programs = Program.objects.filter(type__name=RULES_PROGRAM_TYPE_NAME)
+        logger.debug('...found {} already created `auto` program(s)...'.format(programs.count()))
+    logger.debug('...found {} rules.'.format(len(PROGRAM_RULES)))
+
+    bundles_variants = process_rules(PROGRAM_RULES)
+
+
