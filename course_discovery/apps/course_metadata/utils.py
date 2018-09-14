@@ -342,7 +342,8 @@ def create_programs():
                     marketing_slug='{}-program-{}'.format(rule_name, i),
                 )
             )
-    Program.objects.bulk_create(programs_bulk)
+    created = Program.objects.bulk_create(programs_bulk)
     logger.info(
         "Created {} new program(s)! Skipped {} (already presented)".format(len(programs_bulk), skipped)
     )
+    return len(created)

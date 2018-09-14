@@ -1,16 +1,18 @@
+from django.core.management import call_command
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_extensions.cache.mixins import CacheResponseMixin
 
 from course_discovery.apps.api import filters, serializers
 from course_discovery.apps.api.pagination import ProxiedPagination
 from course_discovery.apps.api.utils import get_query_param
 from course_discovery.apps.course_metadata.models import Program
+from course_discovery.apps.course_metadata.utils import create_programs
 
 
-# pylint: disable=no-member
 class ProgramViewSet(CacheResponseMixin, viewsets.ReadOnlyModelViewSet):
     """ Program resource. """
     lookup_field = 'uuid'
@@ -95,3 +97,18 @@ class ProgramViewSet(CacheResponseMixin, viewsets.ReadOnlyModelViewSet):
             return Response(uuids)
 
         return super(ProgramViewSet, self).list(request, *args, **kwargs)
+
+
+class MakeProgramsAPIView(APIView):
+    """
+    View to perform automated Programs generation from CMS/course_outline page.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        """
+        Initiates Programs creation based on predefined rules.
+        """
+        # refresh_courses from LMS:
+        call_command('refresh_course_metadata')
+        return Response(create_programs())
