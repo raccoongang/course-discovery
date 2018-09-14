@@ -219,6 +219,27 @@ class CoursesApiDataLoader(AbstractDataLoader):
             'title': body['name'],
         }
 
+        try:
+            if body['effort'] is None:
+                logger.warn(
+                    "[RG: customization] - automate programs generation params are absent! "
+                    "Setup `course.effort` (formats expected: `number` or `number:string`) to be able to "
+                    "include the course to programs automatically!"
+                )
+                return defaults
+
+            program_duration, *program_type = body['effort'].split(':')
+            defaults['program_duration'] = program_duration
+            if program_type:
+                defaults['program_type'] = program_type[0].lower()
+
+        except (ValueError, KeyError, AttributeError, IndexError):
+            logger.error(
+                "[RG: customization] - can't parse `course.effort` "
+                "(formats expected: `number` or `number:string`) - found: %s",
+                body['effort']
+            )
+
         return defaults
 
     def get_pacing_type(self, body):
