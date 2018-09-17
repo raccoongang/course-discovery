@@ -10,14 +10,15 @@ from course_discovery.apps.api.v1.views.courses import CourseViewSet
 from course_discovery.apps.api.v1.views.organizations import OrganizationViewSet
 from course_discovery.apps.api.v1.views.people import PersonViewSet
 from course_discovery.apps.api.v1.views.program_types import ProgramTypeViewSet
-from course_discovery.apps.api.v1.views.programs import ProgramViewSet
+from course_discovery.apps.api.v1.views.programs import ProgramViewSet, MakeProgramsAPIView
 
 partners_router = routers.SimpleRouter()
 partners_router.register(r'affiliate_window/catalogs', AffiliateWindowViewSet, base_name='affiliate_window')
 
 urlpatterns = [
     url(r'^partners/', include(partners_router.urls, namespace='partners')),
-    url(r'search/typeahead', search_views.TypeaheadSearchView.as_view(), name='search-typeahead')
+    url(r'search/typeahead', search_views.TypeaheadSearchView.as_view(), name='search-typeahead'),
+    url(r'make_programs', MakeProgramsAPIView.as_view(), name='make-programs'),
 ]
 
 router = routers.SimpleRouter()
