@@ -185,7 +185,7 @@ def compute_bundles():
 
         for course in courses:
             course_item = {
-                'name': course.title,
+                'uuid': course.uuid,
                 'duration': course.program_duration,
             }
             if course.program_type is not None:
@@ -305,11 +305,11 @@ def create_programs():
     """
     Create Program model objects based on computed bundles.
     """
-    from course_discovery.apps.course_metadata.models import Program, ProgramType
+    from course_discovery.apps.course_metadata.models import Course, Program, ProgramType
 
     partner = Partner.objects.first()  # we don't expect more then one here
     bundles_dict = compute_bundles()
-    programs = None
+    ruled_programs = None
 
     logger.debug('Preparing for programs creation...')
 
@@ -321,29 +321,47 @@ def create_programs():
         )
         logger.debug('...so, there are no `automated` programs yet')
     else:
-        programs = Program.objects.filter(type__name=RULES_PROGRAM_TYPE_NAME)
-        logger.debug('...found {} already created `automated` program(s)...'.format(programs.count()))
+        ruled_programs = Program.objects\
+            .filter(type__name=RULES_PROGRAM_TYPE_NAME)\
+            .prefetch_related('courses')
+        logger.debug(
+            '...found {} already created `automated` program(s)...'.format(ruled_programs.count())
+        )
 
-    programs_bulk = []
+    generated = 0
     skipped = 0
+
+    def already_exists(title, bundle, programs):
+        bundle_set = set(map(lambda c: c['uuid'], bundle))
+        for program in programs:
+            if program.title == title:
+                return True
+            presented_set = set(program.courses.values_list('uuid', flat=True))
+            if bundle_set == presented_set:
+                return True
+        return False
+
     for rule_name, bundles in bundles_dict.items():
         for i, bundle in enumerate(bundles, 1):
-            title = 'Program-{} (rule: {})'.format(i, rule_name)
-            if programs and programs.filter(title=title):
+            title = 'Program-{} {}'.format(i, rule_name)
+
+            if ruled_programs and already_exists(title, bundle, ruled_programs):
                 logger.info("Program with title: %s already exists. Skipping...", title)
                 skipped += 1
                 continue
-            programs_bulk.append(
-                Program(
-                    title=title,
-                    status=ProgramStatus.Active,
-                    type=p_type,
-                    partner=partner,
-                    marketing_slug='{}-program-{}'.format(rule_name, i),
-                )
+            program = Program(
+                title=title,
+                status=ProgramStatus.Active,
+                type=p_type,
+                partner=partner,
+                marketing_slug='{}-program-{}'.format(rule_name, i),
             )
-    created = Program.objects.bulk_create(programs_bulk)
+            program.save()
+            generated += 1
+            program.courses = Course.objects.filter(uuid__in=map(lambda c: c['uuid'], bundle))
+            program.save()
+
     logger.info(
-        "Created {} new program(s)! Skipped {} (already presented)".format(len(programs_bulk), skipped)
+        "Created {} new program(s)! Skipped {} (already presented)".format(generated, skipped)
     )
-    return len(created)
+    return generated
