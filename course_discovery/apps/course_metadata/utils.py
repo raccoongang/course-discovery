@@ -13,7 +13,9 @@ from stdimage.utils import UploadTo
 
 from course_discovery.apps.core.models import Partner
 from course_discovery.apps.course_metadata.choices import ProgramStatus
-from course_discovery.apps.course_metadata.constants import RULES_PROGRAM_TYPE_NAME, PROGRAM_RULES
+from course_discovery.apps.course_metadata.constants import (
+    RULES_PROGRAM_TYPE_NAME, PROGRAM_RULES, BUNDLES_PRICES,
+)
 from course_discovery.apps.course_metadata.exceptions import MarketingSiteAPIClientException
 
 RESERVED_ELASTICSEARCH_QUERY_OPERATORS = ('AND', 'OR', 'NOT', 'TO',)
@@ -331,6 +333,9 @@ def create_programs():
     generated = 0
     skipped = 0
 
+    def get_bundle_price(rule_name):
+        return BUNDLES_PRICES.get(rule_name)
+
     def already_exists(title, bundle, programs):
         bundle_set = set(map(lambda c: c['uuid'], bundle))
         for program in programs:
@@ -342,6 +347,7 @@ def create_programs():
         return False
 
     for rule_name, bundles in bundles_dict.items():
+        bundle_price = get_bundle_price(rule_name) or 0.00
         for i, bundle in enumerate(bundles, 1):
             title = 'Program-{} {}'.format(i, rule_name)
 
@@ -355,6 +361,7 @@ def create_programs():
                 type=p_type,
                 partner=partner,
                 marketing_slug='{}-program-{}'.format(rule_name, i),
+                price=bundle_price,
             )
             program.save()
             generated += 1
