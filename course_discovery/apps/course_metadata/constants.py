@@ -2,7 +2,7 @@ COURSE_ID_REGEX = r'[^/+]+(/|\+)[^/+]+'
 COURSE_RUN_ID_REGEX = r'[^/+]+(/|\+)[^/+]+(/|\+)[^/]+'
 
 # Rules for automated Programs creation:
-RULES_PROGRAM_TYPE_NAME = 'Rules'
+RULES_PROGRAM_TYPE_NAME = 'Bundles'
 PROGRAM_RULES = [
     {
         'name': '[14 Hour Bundle] Two 7-hour courses',
