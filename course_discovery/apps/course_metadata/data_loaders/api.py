@@ -221,6 +221,8 @@ class CoursesApiDataLoader(AbstractDataLoader):
 
         try:
             if body['effort'] is None:
+                defaults['program_duration'] = None
+                defaults['program_type'] = None
                 logger.warn(
                     "[RG: customization] - automate programs generation params are absent! "
                     "Setup `course.effort` (formats expected: `number` or `number:string`) to be able to "
