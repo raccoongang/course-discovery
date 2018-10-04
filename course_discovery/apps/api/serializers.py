@@ -866,7 +866,7 @@ class ProgramSerializer(MinimalProgramSerializer):
             'min_hours_effort_per_week', 'max_hours_effort_per_week', 'video', 'expected_learning_items',
             'faq', 'credit_backing_organizations', 'corporate_endorsements', 'job_outlook_items',
             'individual_endorsements', 'languages', 'transcript_languages', 'subjects', 'price_ranges',
-            'staff', 'credit_redemption_overview', 'applicable_seat_types', 'price', 'currency'
+            'staff', 'credit_redemption_overview', 'applicable_seat_types', 'price', 'currency', 'bundle_type'
         )
 
 

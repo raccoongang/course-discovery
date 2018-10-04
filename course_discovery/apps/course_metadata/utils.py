@@ -14,7 +14,7 @@ from stdimage.utils import UploadTo
 from course_discovery.apps.core.models import Partner
 from course_discovery.apps.course_metadata.choices import ProgramStatus
 from course_discovery.apps.course_metadata.constants import (
-    RULES_PROGRAM_TYPE_NAME, PROGRAM_RULES, BUNDLES_PRICES,
+    RULES_PROGRAM_TYPE_NAME, PROGRAM_RULES, BUNDLES_PRICES, BUNDLE_TYPE_MAPPING
 )
 from course_discovery.apps.course_metadata.exceptions import MarketingSiteAPIClientException
 
@@ -349,7 +349,8 @@ def create_programs():
     for rule_name, bundles in bundles_dict.items():
         bundle_price = get_bundle_price(rule_name) or 0.00
         for i, bundle in enumerate(bundles, 1):
-            title = 'Program-{} {}'.format(i, rule_name)
+            title = '#{} {}'.format(i, rule_name)
+            bundle_type = BUNDLE_TYPE_MAPPING.get(rule_name)
 
             if ruled_programs and already_exists(title, bundle, ruled_programs):
                 logger.info("Program with title: %s already exists. Skipping...", title)
@@ -362,6 +363,7 @@ def create_programs():
                 partner=partner,
                 marketing_slug='{}-program-{}'.format(rule_name, i),
                 price=bundle_price,
+                bundle_type=bundle_type
             )
             program.save()
             generated += 1

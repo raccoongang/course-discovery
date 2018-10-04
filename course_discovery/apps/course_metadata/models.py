@@ -13,6 +13,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 from django_extensions.db.fields import AutoSlugField
 from django_extensions.db.models import TimeStampedModel
+from django.conf import settings
 from haystack.query import SearchQuerySet
 from solo.models import SingletonModel
 from sortedm2m.fields import SortedManyToManyField
@@ -806,6 +807,7 @@ class Program(TimeStampedModel):
 
     price = models.DecimalField(decimal_places=2, max_digits=10, null=False, default=0.00)
     currency = models.ForeignKey(Currency, default='USD')
+    bundle_type = models.CharField(max_length=32, null=True, blank=True, choices=settings.BUNDLE_TYPES)
 
     objects = ProgramQuerySet.as_manager()
 
