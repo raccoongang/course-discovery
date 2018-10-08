@@ -516,3 +516,14 @@ if os.environ.get('ENABLE_DJANGO_TOOLBAR', False):
         'debug_toolbar.panels.redirects.RedirectsPanel',
         'elastic_panel.panel.ElasticDebugPanel'
     ]
+
+
+BUNDLE_TYPES = (
+    ('14', '14 hour bundle'),
+    ('14:uspap', '14 hour USPAP bundle'),
+    ('21', '21 hour bundle'),
+    ('20', '20 hour bundle'),
+    ('28', '28 hour bundle'),
+    ('30', '30 hour bundle'),
+    ('50', '50 hour bundle'),
+)

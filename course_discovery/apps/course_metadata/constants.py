@@ -48,6 +48,17 @@ PROGRAM_RULES = [
     },
 ]
 
+BUNDLE_TYPE_MAPPING = {
+    '[14 Hour Bundle] Two 7-hour courses': '14',
+    '[14 Hour Bundle] 7-hour course and 2018-2019 USPAP course': '14:uspap',
+    '[21 Hour Bundle] Three 7 hour courses': '21',
+    '[20 Hour Bundle] Two 7-hour courses and two 3-hour courses': '20',
+    '[28 Hour Bundle] Four 7-hour courses': '28',
+    '[28 Hour Bundle] Two 7-hour courses, one 8-hour course and two 3-hour courses': '28',
+    '[30 Hour Bundle] Three 7-hour courses and three 3-hour courses': '30',
+    '[50 Hour Bundle] Five 7-hour courses, 8-hour course, 4-hour course and 3-hour course': '50'
+}
+
 BUNDLES_PRICES = {
     '[14 Hour Bundle] 7-hour course and 2018-2019 USPAP course': 199,
     '[21 Hour Bundle] Three 7 hour courses': 269,
