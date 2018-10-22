@@ -527,3 +527,5 @@ BUNDLE_TYPES = (
     ('30', '30 hour bundle'),
     ('50', '50 hour bundle'),
 )
+
+DELETE_UNUSED_INDEXES = True

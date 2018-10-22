@@ -47,9 +47,13 @@ class Command(HaystackCommand):
             if not options.get('disable_change_limit', False):
                 record_count_is_sane, index_info_string = self.sanity_check_new_index(backend.conn, index, record_count)
                 if not record_count_is_sane:
+                    if settings.DELETE_UNUSED_INDEXES:
+                        self.delete_unused_indexes(backend, alias)
                     raise CommandError('Sanity check failed for new index. ' + index_info_string)
 
             self.set_alias(backend, alias, index)
+            if settings.DELETE_UNUSED_INDEXES:
+                self.delete_unused_indexes(backend, alias)
 
     def percentage_change(self, current, previous):
         try:
@@ -114,3 +118,10 @@ class Command(HaystackCommand):
         index_name = ElasticsearchUtils.create_index(backend.conn, alias)
         backend.index_name = index_name
         return alias, index_name
+
+    def delete_unused_indexes(self, backend, alias):
+        indexes = set(i for i in backend.conn.indices.get_alias('').keys() if i.startswith(alias))
+        indexes = list(indexes - set(backend.conn.indices.get_alias(alias).keys()))
+
+        for i in range(0, len(indexes), 150):
+            backend.conn.indices.delete(','.join(indexes[i:i+150]))
