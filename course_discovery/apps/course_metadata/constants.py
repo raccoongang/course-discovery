@@ -61,7 +61,8 @@ BUNDLE_TYPE_MAPPING = {
 }
 
 BUNDLES_PRICES = {
-    '[14 Hour Bundle] 7-hour course and 2018-2019 USPAP course': 199,
+    '[14 Hour Bundle] Two 7-hour courses': 199,
+    '[14 Hour Bundle] 7-hour course and 2018-2019 USPAP course': 269,
     '[21 Hour Bundle] Three 7 hour courses': 269,
     '[21 Hour Bundle] 8-hour course, 7-hour course and two 3-hour courses': 289,
     '[20 Hour Bundle] Two 7-hour courses and two 3-hour courses': 259,
