@@ -856,6 +856,7 @@ class ProgramSerializer(MinimalProgramSerializer):
     staff = PersonSerializer(many=True)
     instructor_ordering = PersonSerializer(many=True)
     applicable_seat_types = serializers.SerializerMethodField()
+    price = serializers.DecimalField(decimal_places=2, max_digits=10)
 
     @classmethod
     def prefetch_queryset(cls, partner):
@@ -895,7 +896,8 @@ class ProgramSerializer(MinimalProgramSerializer):
             'min_hours_effort_per_week', 'max_hours_effort_per_week', 'video', 'expected_learning_items',
             'faq', 'credit_backing_organizations', 'corporate_endorsements', 'job_outlook_items',
             'individual_endorsements', 'languages', 'transcript_languages', 'subjects', 'price_ranges',
-            'staff', 'credit_redemption_overview', 'applicable_seat_types', 'instructor_ordering'
+            'staff', 'credit_redemption_overview', 'applicable_seat_types', 'instructor_ordering',
+            'price', 'currency',
         )
 
 
