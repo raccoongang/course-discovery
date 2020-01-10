@@ -1006,6 +1006,8 @@ class Program(TimeStampedModel):
     hidden = models.BooleanField(
         default=False, db_index=True,
         help_text=_('Hide program on marketing site landing and search pages. This program MAY have a detail page.'))
+    price = models.DecimalField(decimal_places=2, max_digits=10, null=False, default=0.00)
+    currency = models.ForeignKey(Currency, default='USD')
 
     objects = ProgramQuerySet.as_manager()
 
