@@ -14,8 +14,10 @@ class CatalogTests(ElasticsearchTestMixin, TestCase):
     """ Catalog model tests. """
 
     def setUp(self):
-        super(CatalogTests, self).setUp()
+        super().setUp()
         self.catalog = factories.CatalogFactory(query='title:abc*')
+        self.catalog_with_incorrect_query = factories.CatalogFactory(query='title:')
+
         self.course = CourseFactory(key='a/b/c', title='ABCs of Ͳҽʂէìղց')
         self.refresh_index()
 
@@ -25,7 +27,7 @@ class CatalogTests(ElasticsearchTestMixin, TestCase):
         self.catalog.name = name
         self.catalog.save()
 
-        expected = 'Catalog #{id}: {name}'.format(id=self.catalog.id, name=name)
+        expected = f'Catalog #{self.catalog.id}: {name}'
         self.assertEqual(str(self.catalog), expected)
 
     def test_courses(self):
@@ -49,6 +51,14 @@ class CatalogTests(ElasticsearchTestMixin, TestCase):
             {course_run.key: True, uncontained_course_run.key: False}
         )
 
+    def test_contains_course_runs_if_query_is_incorrect(self):
+        """ Verify the method returns a mapping of course run IDs to booleans. """
+        course_run = CourseRunFactory(course=self.course)
+        self.assertDictEqual(
+            self.catalog_with_incorrect_query.contains_course_runs([course_run.key]),
+            {course_run.key: False}
+        )
+
     def test_courses_count(self):
         """ Verify the method returns the number of courses contained in the Catalog. """
         self.assertEqual(self.catalog.courses_count, 1)
@@ -57,6 +67,11 @@ class CatalogTests(ElasticsearchTestMixin, TestCase):
         CourseFactory()
         CourseFactory(title='ABCDEF')
         self.assertEqual(self.catalog.courses_count, 2)
+
+    def test_courses_count_if_query_is_incorrect(self):
+        """ Verify the method returns the number of courses contained in the Catalog. """
+        CourseFactory(title='ABCDEF')
+        self.assertEqual(self.catalog_with_incorrect_query.courses_count, 0)
 
     def test_get_viewers(self):
         """ Verify the method returns a QuerySet of individuals with explicit permission to view a Catalog. """

@@ -7,12 +7,12 @@ import pytest
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.test import TestCase
-from factory import DjangoModelFactory
+from factory.django import DjangoModelFactory
 from pytz import UTC
 
 from course_discovery.apps.api.v1.tests.test_views.mixins import FuzzyInt
 from course_discovery.apps.course_metadata.algolia_models import (
-    AlgoliaProxyCourse, AlgoliaProxyProduct, AlgoliaProxyProgram
+    AlgoliaProxyCourse, AlgoliaProxyProduct, AlgoliaProxyProgram, SearchDefaultResultsConfiguration
 )
 from course_discovery.apps.course_metadata.choices import CourseRunStatus
 from course_discovery.apps.course_metadata.models import (
@@ -51,7 +51,8 @@ class TestCacheInvalidation:
                          DrupalPublishUuidConfig, MigratePublisherToCourseMetadataConfig, SubjectTranslation,
                          TopicTranslation, ProfileImageDownloadConfig, TagCourseUuidsConfig, RemoveRedirectsConfig,
                          BulkModifyProgramHookConfig, BackfillCourseRunSlugsConfig, AlgoliaProxyCourse,
-                         AlgoliaProxyProgram, AlgoliaProxyProduct, ProgramTypeTranslation, LevelTypeTranslation]:
+                         AlgoliaProxyProgram, AlgoliaProxyProduct, ProgramTypeTranslation,
+                         LevelTypeTranslation, SearchDefaultResultsConfiguration]:
                 continue
             if 'abstract' in model.__name__.lower() or 'historical' in model.__name__.lower():
                 continue
@@ -530,7 +531,7 @@ class ExternalCourseKeyDBTests(TestCase, ExternalCourseKeyTestMixin):
                 course_run.external_key = course_run_ca.external_key
                 course_run.save()
 
-        with self.assertNumQueries(FuzzyInt(36, 1)):
+        with self.assertNumQueries(FuzzyInt(34, 1)):
             course_run.external_key = 'some-safe-key'
             course_run.save()
 
@@ -553,7 +554,7 @@ class ExternalCourseKeyDBTests(TestCase, ExternalCourseKeyTestMixin):
                 course_run.external_key = course_run_ba.external_key
                 course_run.save()
 
-        with self.assertNumQueries(FuzzyInt(36, 1)):
+        with self.assertNumQueries(FuzzyInt(34, 1)):
             course_run.external_key = 'some-safe-key'
             course_run.save()
 
@@ -579,7 +580,7 @@ class ExternalCourseKeyDraftTests(ExternalCourseKeyTestDataMixin, TestCase):
         )
 
     def test_draft_does_not_collide_with_draft(self):
-        with self.assertNumQueries(77, threshold=0):
+        with self.assertNumQueries(FuzzyInt(21, 1)):
             factories.CourseRunFactory(
                 course=self.course_1,
                 draft=True,
@@ -600,7 +601,7 @@ class ExternalCourseKeyDraftTests(ExternalCourseKeyTestDataMixin, TestCase):
                 )
 
     def test_nondraft_does_not_collide_with_draft(self):
-        with self.assertNumQueries(77, threshold=0):
+        with self.assertNumQueries(FuzzyInt(71, 1)):
             factories.CourseRunFactory(
                 course=self.course_1,
                 draft=False,
@@ -610,7 +611,7 @@ class ExternalCourseKeyDraftTests(ExternalCourseKeyTestDataMixin, TestCase):
             )
 
     def test_collision_does_not_include_drafts(self):
-        with self.assertNumQueries(77, threshold=0):
+        with self.assertNumQueries(FuzzyInt(71, 1)):
             course_run = factories.CourseRunFactory(
                 course=self.course_1,
                 draft=False,
@@ -619,7 +620,7 @@ class ExternalCourseKeyDraftTests(ExternalCourseKeyTestDataMixin, TestCase):
                 enrollment_end=datetime.datetime(2014, 1, 1, tzinfo=UTC),
             )
         message = _duplicate_external_key_message([course_run])  # Not draft_course_run_1
-        with self.assertNumQueries(11, threshold=0):
+        with self.assertNumQueries(FuzzyInt(11, 1)):
             with self.assertRaisesRegex(ValidationError, escape(message)):
                 factories.CourseRunFactory(
                     course=self.course_1,

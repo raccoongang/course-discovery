@@ -5,6 +5,7 @@ from django.db.models.functions import Lower
 from django.http.response import Http404
 from django.utils.translation import ugettext as _
 from django_filters.rest_framework import DjangoFilterBackend
+from elasticsearch_dsl.query import Q as ESDSLQ
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -13,6 +14,7 @@ from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 
 from course_discovery.apps.api import filters, serializers
+from course_discovery.apps.api.mixins import ValidElasticSearchQueryRequiredMixin
 from course_discovery.apps.api.pagination import ProxiedPagination
 from course_discovery.apps.api.permissions import IsCourseRunEditorOrDjangoOrReadOnly
 from course_discovery.apps.api.serializers import MetadataWithRelatedChoices
@@ -36,7 +38,9 @@ def writable_request_wrapper(method):
         except (PermissionDenied, ValidationError, Http404):
             raise  # just pass these along
         except Exception as e:  # pylint: disable=broad-except
-            content = e.content.decode('utf8') if hasattr(e, 'content') else str(e)
+            content = str(e)
+            if hasattr(e, 'content'):
+                content = e.content.decode('utf8') if isinstance(e.content, bytes) else e.content
             msg = _('Failed to set course run data: {}').format(content)
             log.exception(msg)
             return Response(msg, status=status.HTTP_400_BAD_REQUEST)
@@ -44,7 +48,7 @@ def writable_request_wrapper(method):
 
 
 # pylint: disable=useless-super-delegation
-class CourseRunViewSet(viewsets.ModelViewSet):
+class CourseRunViewSet(ValidElasticSearchQueryRequiredMixin, viewsets.ModelViewSet):
     """ CourseRun resource. """
     filter_backends = (DjangoFilterBackend, OrderingFilter)
     filterset_class = filters.CourseRunFilter
@@ -91,7 +95,7 @@ class CourseRunViewSet(viewsets.ModelViewSet):
             queryset = self.queryset
 
         if q:
-            qs = SearchQuerySetWrapper(CourseRun.search(q).filter(partner=partner.short_code))
+            qs = SearchQuerySetWrapper(CourseRun.search(q).filter('term', partner=partner.short_code))
             # This is necessary to avoid issues with the filter backend.
             qs.model = self.queryset.model
             return qs
@@ -312,7 +316,10 @@ class CourseRunViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def update(self, request, **kwargs):
-        """ Update one, or more, fields for a course run. """
+        # logging to help debug error around course url slugs incrementing
+        log.info('The raw course run data coming from publisher is {}.'.format(request.data))
+
+        # Update one, or more, fields for a course run.
         course_run = self.get_object()
         course_run = ensure_draft_world(course_run)  # always work on drafts
         partial = kwargs.pop('partial', False)
@@ -392,10 +399,13 @@ class CourseRunViewSet(viewsets.ModelViewSet):
 
         if query and course_run_ids:
             course_run_ids = course_run_ids.split(',')
-            course_runs = CourseRun.search(query).filter(partner=partner.short_code).filter(key__in=course_run_ids). \
-                values_list('key', flat=True)
-            contains = {course_run_id: course_run_id in course_runs for course_run_id in course_run_ids}
-
+            course_runs = (
+                CourseRun.search(query)
+                .filter(ESDSLQ('term', partner=partner.short_code) & ESDSLQ('terms', **{'key.raw': course_run_ids}))
+                .source(['key'])
+            )
+            course_runs_keys = [i.key for i in course_runs]
+            contains = {course_run_id: course_run_id in course_runs_keys for course_run_id in course_run_ids}
             instance = {'course_runs': contains}
             serializer = serializers.ContainedCourseRunsSerializer(instance)
             return Response(serializer.data)

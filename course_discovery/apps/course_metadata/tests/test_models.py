@@ -15,6 +15,7 @@ from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from freezegun import freeze_time
@@ -31,14 +32,16 @@ from course_discovery.apps.course_metadata.choices import CourseRunStatus, Progr
 from course_discovery.apps.course_metadata.models import (
     FAQ, AbstractMediaModel, AbstractNamedModel, AbstractTitleDescriptionModel, AbstractValueModel,
     CorporateEndorsement, Course, CourseEditor, CourseRun, Curriculum, CurriculumCourseMembership,
-    CurriculumCourseRunExclusion, DegreeCost, DegreeDeadline, Endorsement, Organization, Program, Ranking, Seat,
-    SeatType, Subject, Topic
+    CurriculumCourseRunExclusion, CurriculumProgramMembership, DegreeCost, DegreeDeadline, Endorsement, Organization,
+    Program, Ranking, Seat, SeatType, Subject, Topic
 )
 from course_discovery.apps.course_metadata.publishers import (
     CourseRunMarketingSitePublisher, ProgramMarketingSitePublisher
 )
 from course_discovery.apps.course_metadata.tests import factories
-from course_discovery.apps.course_metadata.tests.factories import CourseRunFactory, ImageFactory, SeatTypeFactory
+from course_discovery.apps.course_metadata.tests.factories import (
+    CourseRunFactory, ImageFactory, SeatFactory, SeatTypeFactory
+)
 from course_discovery.apps.course_metadata.tests.mixins import MarketingSitePublisherTestMixin
 from course_discovery.apps.course_metadata.utils import ensure_draft_world
 from course_discovery.apps.course_metadata.utils import logger as utils_logger
@@ -46,11 +49,9 @@ from course_discovery.apps.course_metadata.utils import uslugify
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 from course_discovery.apps.publisher.tests.factories import OrganizationExtensionFactory
 
-# pylint: disable=no-member
-
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('haystack_default_connection')
+@pytest.mark.usefixtures('elasticsearch_dsl_default_connection')
 @ddt.ddt
 class TestCourse(TestCase):
     def test_str(self):
@@ -259,7 +260,7 @@ class TestCourseEditor(TestCase):
 
         # Course with an invalid editor (but course is in our group)
         cls.course_bad_editor_in_group = factories.CourseFactory(title="bad editor in group")
-        cls.course_bad_editor_in_group.authoring_organizations.add(cls.org_ext.organization)  # pylint: disable=no-member
+        cls.course_bad_editor_in_group.authoring_organizations.add(cls.org_ext.organization)
         cls.run_bad_editor_in_group = factories.CourseRunFactory(course=cls.course_bad_editor_in_group)
         factories.CourseEditorFactory(user=bad_editor, course=cls.course_bad_editor_in_group)
 
@@ -267,7 +268,7 @@ class TestCourseEditor(TestCase):
         cls.good_editor = factories.UserFactory()
         cls.good_editor.groups.add(cls.org_ext.group)
         cls.course_good_editor = factories.CourseFactory(title="good editor")
-        cls.course_good_editor.authoring_organizations.add(cls.org_ext.organization)  # pylint: disable=no-member
+        cls.course_good_editor.authoring_organizations.add(cls.org_ext.organization)
         cls.run_good_editor = factories.CourseRunFactory(course=cls.course_good_editor)
         factories.CourseEditorFactory(user=cls.good_editor, course=cls.course_good_editor)
 
@@ -278,15 +279,15 @@ class TestCourseEditor(TestCase):
 
         # Course with user as an valid editor
         cls.course_editor = factories.CourseFactory(title="editor")
-        cls.course_editor.authoring_organizations.add(cls.org_ext.organization)  # pylint: disable=no-member
+        cls.course_editor.authoring_organizations.add(cls.org_ext.organization)
         cls.run_editor = factories.CourseRunFactory(course=cls.course_editor)
         factories.CourseEditorFactory(user=cls.user, course=cls.course_editor)
 
         # Add another authoring_org, which will cause django to return duplicates, if we don't filter them out
         org_ext2 = OrganizationExtensionFactory()
         cls.user.groups.add(org_ext2.group)
-        cls.course_editor.authoring_organizations.add(org_ext2.organization)  # pylint: disable=no-member
-        cls.course_bad_editor_in_group.authoring_organizations.add(org_ext2.organization)  # pylint: disable=no-member
+        cls.course_editor.authoring_organizations.add(org_ext2.organization)
+        cls.course_bad_editor_in_group.authoring_organizations.add(org_ext2.organization)
 
     def setUp(self):
         """ Resets self.user to not be staff and to belong to the self.org_ext group. """
@@ -357,22 +358,19 @@ class TestCourseEditor(TestCase):
         assert len(editors) == 5
 
 
+@pytest.mark.django_db
+@pytest.mark.usefixtures('elasticsearch_dsl_default_connection')
 @ddt.ddt
 class CourseRunTests(OAuth2Mixin, TestCase):
     """ Tests for the `CourseRun` model. """
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.course_run = factories.CourseRunFactory()
-        cls.partner = cls.course_run.course.partner
-
     def setUp(self):
-        """ Reset self.course_run and self.partner to whatever the DB says. """
+        """
+        Set up the course_run, course and partner to be used across tests.
+        """
         super().setUp()
-        self.course_run.refresh_from_db()
-        self.course_run.course.refresh_from_db()
-        self.partner.refresh_from_db()
+        self.course_run = factories.CourseRunFactory()
+        self.partner = self.course_run.course.partner
 
     def test_enrollable_seats(self):
         """ Verify the expected seats get returned. """
@@ -1327,10 +1325,11 @@ class ProgramTests(TestCase):
         Resets course canonical_course_runs to initial state.
         """
         super(ProgramTests, self).tearDown()
-        for course_run in self.course_runs[:2]:
-            course = course_run.course
-            course.canonical_course_run = None
-            course.save()
+        with transaction.atomic():
+            for course_run in self.course_runs[:2]:
+                course = course_run.course
+                course.canonical_course_run = None
+                course.save()
 
     # pylint: disable=access-member-before-definition, attribute-defined-outside-init
     def create_program_with_seats(self):
@@ -1358,13 +1357,15 @@ class ProgramTests(TestCase):
         """
         Verify that the program endpoint correctly handles basic elasticsearch queries
         """
+        call_command('search_index', '--rebuild', '-f')
         query = 'title:' + self.program.title
-        self.assertSetEqual(set(Program.search(query)), set([self.program]))
+        self.assertSetEqual(set([Program.search(query).first()]), set([self.program]))
 
     def test_subject_search(self):
         """
         Verify that the program endpoint correctly handles elasticsearch queries on the subject uuid
         """
+        call_command('search_index', '--rebuild', '-f')
         query = str(self.subjects[0].uuid)
         self.assertSetEqual(set(Program.search(query)), set([self.program]))
 
@@ -1897,11 +1898,37 @@ class ProgramTests(TestCase):
         self.assertEqual(program.price_ranges, expected_price_ranges)
 
     def test_staff(self):
+        TWO_WEEKS_FROM_TODAY = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=14)
+        YESTERDAY = datetime.datetime.now(pytz.UTC) - datetime.timedelta(days=1)
+        TOMORROW = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
+        expected_staff = factories.PersonFactory.create_batch(2)
+        unexpected_staff = factories.PersonFactory.create_batch(2)
+        advertised_course_run = factories.CourseRunFactory(
+            start=YESTERDAY,
+            end=TWO_WEEKS_FROM_TODAY,
+            status=CourseRunStatus.Published,
+            enrollment_end=TWO_WEEKS_FROM_TODAY,
+            staff=set(expected_staff)
+        )
+        SeatFactory(
+            course_run=advertised_course_run,
+            type=SeatTypeFactory.verified(),
+            upgrade_deadline=TOMORROW
+        )
+        ignored_course_run = factories.CourseRunFactory(
+            status=CourseRunStatus.Unpublished,
+            staff=set(unexpected_staff)
+        )
+        self.program.courses.set([advertised_course_run.course, ignored_course_run.course])
+
+        self.assertEqual(self.program.staff, set(expected_staff))
+
+    def test_staff_no_advertised_course_run(self):
         staff = factories.PersonFactory.create_batch(2)
         self.course_runs[0].staff.add(staff[0])
         self.course_runs[1].staff.add(staff[1])
 
-        self.assertEqual(self.program.staff, set(staff))
+        self.assertEqual(self.program.staff, set())
 
     def test_banner_image(self):
         self.program.banner_image = make_image_file('test_banner.jpg')
@@ -1921,8 +1948,10 @@ class ProgramTests(TestCase):
 
     @ddt.data(ProgramStatus.choices)
     def test_is_active(self, status):
+        initial_status = self.program.status
         self.program.status = status
         self.assertEqual(self.program.is_active, status == ProgramStatus.Active)
+        self.program.status = initial_status
 
     def test_publication_disabled(self):
         """
@@ -2126,6 +2155,44 @@ class CurriculumTests(TestCase):
         self.assertEqual(cm.exception.message_dict[field_name], ['Invalid HTML received'])
 
 
+class CurriculumProgramMembershipTests(TestCase):
+    """ Tests of the CurriculumProgramMembership model. """
+    def setUp(self):
+        super().setUp()
+        self.course_run = factories.CourseRunFactory()
+        self.degree = factories.DegreeFactory()
+        self.program = factories.ProgramFactory(courses=[self.course_run.course])
+        self.curriculum = Curriculum.objects.create(program=self.degree, uuid=uuid.uuid4())
+
+    def test_program_unique_within_same_curriculum(self):
+        CurriculumProgramMembership.objects.create(
+            program=self.program,
+            curriculum=self.curriculum
+        )
+        # Add the same program curriculum relationship again.
+        # Make sure this throws db integrity exception
+        with self.assertRaises(IntegrityError):
+            CurriculumProgramMembership.objects.create(
+                program=self.program,
+                curriculum=self.curriculum
+            )
+
+    def test_same_program_added_to_different_curriculum(self):
+        CurriculumProgramMembership.objects.create(
+            program=self.program,
+            curriculum=self.curriculum
+        )
+        new_curriculum = Curriculum.objects.create(program=self.degree, uuid=uuid.uuid4())
+        CurriculumProgramMembership.objects.create(
+            program=self.program,
+            curriculum=new_curriculum
+        )
+        self.assertEqual(
+            self.curriculum.program_curriculum.all()[0],
+            new_curriculum.program_curriculum.all()[0]
+        )
+
+
 class CurriculumCourseMembershipTests(TestCase):
     """ Tests of the CurriculumCourseMembership model. """
     def setUp(self):
@@ -2153,6 +2220,34 @@ class CurriculumCourseMembershipTests(TestCase):
         self.assertEqual(course_membership.course_runs, set(course_runs[2:]))
         self.assertIn(str(self.curriculum), str(course_membership))
         self.assertIn(str(self.course), str(course_membership))
+
+    def test_course_unique_within_same_curriculum(self):
+        CurriculumCourseMembership.objects.create(
+            course=self.course,
+            curriculum=self.curriculum
+        )
+        # Add the same course curriculum relationship again.
+        # Make sure this throws db integrity exception
+        with self.assertRaises(IntegrityError):
+            CurriculumCourseMembership.objects.create(
+                course=self.course,
+                curriculum=self.curriculum
+            )
+
+    def test_same_course_added_to_different_curriculum(self):
+        CurriculumCourseMembership.objects.create(
+            course=self.course,
+            curriculum=self.curriculum
+        )
+        new_curriculum = Curriculum.objects.create(program=self.degree, uuid=uuid.uuid4())
+        CurriculumCourseMembership.objects.create(
+            course=self.course,
+            curriculum=new_curriculum
+        )
+        self.assertEqual(
+            self.curriculum.course_curriculum.all()[0],
+            new_curriculum.course_curriculum.all()[0]
+        )
 
 
 @ddt.ddt

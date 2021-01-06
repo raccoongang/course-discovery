@@ -16,7 +16,7 @@ from course_discovery.apps.course_metadata.models import (
     Program
 )
 from course_discovery.apps.edx_catalog_extensions.api.serializers import DistinctCountsAggregateFacetSearchSerializer
-from course_discovery.apps.edx_haystack_extensions.distinct_counts.query import DistinctCountsSearchQuerySet
+from course_discovery.apps.edx_elasticsearch_dsl_extensions.distinct_counts.query import DistinctCountsSearchQuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class DistinctCountsAggregateSearchViewSet(AggregateSearchViewSet):
 
     def get_queryset(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """ Return the base Queryset to use to build up the search query."""
-        queryset = super(DistinctCountsAggregateSearchViewSet, self).get_queryset(*args, **kwargs)
+        queryset = super().get_queryset(*args, **kwargs)
         return DistinctCountsSearchQuerySet.from_queryset(queryset).with_distinct_counts('aggregation_key')
 
 
@@ -72,7 +72,7 @@ class ProgramFixtureView(APIView):
             return HttpResponse(self.HELP_STRING, status=404)
         if len(uuids) > self.MAX_REQUESTED_PROGRAMS:
             return HttpResponse(
-                'Too many programs requested, only {} allowed.'.format(self.MAX_REQUESTED_PROGRAMS),
+                f'Too many programs requested, only {self.MAX_REQUESTED_PROGRAMS} allowed.',
                 status=422,
             )
         programs = use_read_replica_if_available(
@@ -221,7 +221,7 @@ def load_related(pks_to_load, excluded_models):
                 continue
             if rel_model in excluded_models:
                 continue
-            rel_pks_name = "{}__pk".format(field.name)
+            rel_pks_name = f"{field.name}__pk"
             rel_pks = objects.values_list(rel_pks_name, flat=True)
             results_by_model[rel_model].update({
                 pk: results_by_model[rel_model].get(pk)

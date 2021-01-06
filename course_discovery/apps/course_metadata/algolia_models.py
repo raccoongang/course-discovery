@@ -5,6 +5,7 @@ import pytz
 from django.db import models
 from django.utils.translation import override
 from django.utils.translation import ugettext as _
+from sortedm2m.fields import SortedManyToManyField
 
 from course_discovery.apps.course_metadata.choices import CourseRunStatus, ProgramStatus
 from course_discovery.apps.course_metadata.models import Course, Program, ProgramType
@@ -46,7 +47,7 @@ def delegate_attributes(cls):
     fields are prefixed with 'product_' to make them Algolia-specific
     '''
 
-    search_fields = ['partner_names', 'product_title', 'primary_description', 'secondary_description',
+    search_fields = ['partner_names', 'partner_keys', 'product_title', 'primary_description', 'secondary_description',
                      'tertiary_description']
     facet_fields = ['availability_level', 'subject_names', 'levels', 'active_languages', 'staff_slugs']
     ranking_fields = ['availability_rank', 'product_recent_enrollment_count', 'promoted_in_spanish_index']
@@ -173,6 +174,10 @@ class AlgoliaProxyCourse(Course, AlgoliaBasicModelFieldsMixin):
         return [org['name'] for org in get_owners(self)]
 
     @property
+    def partner_keys(self):
+        return [org['key'] for org in get_owners(self)]
+
+    @property
     def levels(self):
         level = getattr(self.level_type, 'name_t', None)
         if level:
@@ -265,6 +270,9 @@ class AlgoliaProxyProgram(Program, AlgoliaBasicModelFieldsMixin):
 
     @property
     def product_card_image_url(self):
+        if self.card_image:
+            return self.card_image.url
+        # legacy field for programs with images hosted outside of discovery
         return self.card_image_url
 
     @property
@@ -274,6 +282,10 @@ class AlgoliaProxyProgram(Program, AlgoliaBasicModelFieldsMixin):
     @property
     def partner_names(self):
         return [org['name'] for org in get_owners(self)]
+
+    @property
+    def partner_keys(self):
+        return [org['key'] for org in get_owners(self)]
 
     @property
     def levels(self):
@@ -339,3 +351,9 @@ class AlgoliaProxyProgram(Program, AlgoliaBasicModelFieldsMixin):
                 self.availability_level and
                 self.partner.name == 'edX' and
                 not self.hidden)
+
+
+class SearchDefaultResultsConfiguration(models.Model):
+    index_name = models.CharField(max_length=32, unique=True)
+    programs = SortedManyToManyField(Program, blank=True, null=True)
+    courses = SortedManyToManyField(Course, blank=True, null=True)

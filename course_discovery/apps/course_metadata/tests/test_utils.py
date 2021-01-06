@@ -586,6 +586,7 @@ class TestCreateMissingEntitlement(TestCase):
         self.assertEqual(mock_push.call_args[0][0], run)
 
 
+# pylint: disable=line-too-long
 @ddt.ddt
 class CleanHtmlTests(TestCase):
     @ddt.data(

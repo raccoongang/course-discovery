@@ -1,15 +1,16 @@
-# pylint: disable=no-member,test-inherits-tests
+# pylint: disable=test-inherits-tests
 import datetime
 import itertools
+import re
+from unittest import mock
 from urllib.parse import urlencode
 
 import ddt
-import mock
 import pytest
 import responses
 from django.test import TestCase
 from django.utils.text import slugify
-from haystack.query import SearchQuerySet
+from elasticsearch_dsl.query import Q as ESDSLQ
 from opaque_keys.edx.keys import CourseKey
 from pytz import UTC
 from rest_framework.test import APIRequestFactory
@@ -18,19 +19,18 @@ from waffle.testutils import override_switch
 
 from course_discovery.apps.api.fields import ImageField, StdImageSerializerField
 from course_discovery.apps.api.serializers import (
-    AdditionalPromoAreaSerializer, AffiliateWindowSerializer, CatalogSerializer, ContainedCourseRunsSerializer,
-    ContainedCoursesSerializer, ContentTypeSerializer, CorporateEndorsementSerializer, CourseEditorSerializer,
-    CourseEntitlementSerializer, CourseRunSearchModelSerializer, CourseRunSearchSerializer, CourseRunSerializer,
-    CourseRunWithProgramsSerializer, CourseSearchModelSerializer, CourseSearchSerializer, CourseSerializer,
-    CourseWithProgramsSerializer, CurriculumSerializer, DegreeCostSerializer, DegreeDeadlineSerializer,
-    EndorsementSerializer, FAQSerializer, FlattenedCourseRunWithCourseSerializer, IconTextPairingSerializer,
-    ImageSerializer, MinimalCourseRunSerializer, MinimalCourseSerializer, MinimalOrganizationSerializer,
-    MinimalPersonSerializer, MinimalProgramCourseSerializer, MinimalProgramSerializer, NestedProgramSerializer,
-    OrganizationSerializer, PathwaySerializer, PersonSearchModelSerializer, PersonSearchSerializer, PersonSerializer,
-    PositionSerializer, PrerequisiteSerializer, ProgramsAffiliateWindowSerializer, ProgramSearchModelSerializer,
-    ProgramSearchSerializer, ProgramSerializer, ProgramTypeAttrsSerializer, ProgramTypeSerializer, RankingSerializer,
-    SeatSerializer, SubjectSerializer, TopicSerializer, TypeaheadCourseRunSearchSerializer,
-    TypeaheadProgramSearchSerializer, VideoSerializer, get_lms_course_url_for_archived, get_utm_source_for_user
+    AdditionalPromoAreaSerializer, AffiliateWindowSerializer, CatalogSerializer, CollaboratorSerializer,
+    ContainedCourseRunsSerializer, ContainedCoursesSerializer, ContentTypeSerializer, CorporateEndorsementSerializer,
+    CourseEditorSerializer, CourseEntitlementSerializer, CourseRunSerializer, CourseRunWithProgramsSerializer,
+    CourseSerializer, CourseWithProgramsSerializer, CurriculumSerializer, DegreeCostSerializer,
+    DegreeDeadlineSerializer, EndorsementSerializer, FAQSerializer, FlattenedCourseRunWithCourseSerializer,
+    IconTextPairingSerializer, ImageSerializer, MinimalCourseRunSerializer, MinimalCourseSerializer,
+    MinimalOrganizationSerializer, MinimalPersonSerializer, MinimalProgramCourseSerializer, MinimalProgramSerializer,
+    NestedProgramSerializer, OrganizationSerializer, PathwaySerializer, PersonSerializer, PositionSerializer,
+    PrerequisiteSerializer, ProgramsAffiliateWindowSerializer, ProgramSerializer, ProgramTypeAttrsSerializer,
+    ProgramTypeSerializer, RankingSerializer, SeatSerializer, SubjectSerializer, TopicSerializer,
+    TypeaheadCourseRunSearchSerializer, TypeaheadProgramSearchSerializer, VideoSerializer,
+    get_lms_course_url_for_archived, get_utm_source_for_user
 )
 from course_discovery.apps.api.tests.mixins import SiteMixin
 from course_discovery.apps.catalogs.tests.factories import CatalogFactory
@@ -40,10 +40,17 @@ from course_discovery.apps.core.tests.helpers import make_image_file
 from course_discovery.apps.core.tests.mixins import ElasticsearchTestMixin, LMSAPIClientMixin
 from course_discovery.apps.core.utils import serialize_datetime
 from course_discovery.apps.course_metadata.choices import CourseRunStatus, ProgramStatus
-from course_discovery.apps.course_metadata.models import Course, CourseRun, Person, Program
+from course_discovery.apps.course_metadata.search_indexes.documents import (
+    CourseDocument, CourseRunDocument, PersonDocument, ProgramDocument
+)
+from course_discovery.apps.course_metadata.search_indexes.serializers import (
+    CourseRunSearchDocumentSerializer, CourseRunSearchModelSerializer, CourseSearchDocumentSerializer,
+    CourseSearchModelSerializer, PersonSearchDocumentSerializer, PersonSearchModelSerializer,
+    ProgramSearchDocumentSerializer, ProgramSearchModelSerializer
+)
 from course_discovery.apps.course_metadata.tests.factories import (
-    AdditionalPromoAreaFactory, CorporateEndorsementFactory, CourseEditorFactory, CourseEntitlementFactory,
-    CourseFactory, CourseRunFactory, CurriculumCourseMembershipFactory, CurriculumFactory,
+    AdditionalPromoAreaFactory, CollaboratorFactory, CorporateEndorsementFactory, CourseEditorFactory,
+    CourseEntitlementFactory, CourseFactory, CourseRunFactory, CurriculumCourseMembershipFactory, CurriculumFactory,
     CurriculumProgramMembershipFactory, DegreeCostFactory, DegreeDeadlineFactory, DegreeFactory, EndorsementFactory,
     ExpectedLearningItemFactory, IconTextPairingFactory, ImageFactory, JobOutlookItemFactory, OrganizationFactory,
     PathwayFactory, PersonAreaOfExpertiseFactory, PersonFactory, PersonSocialNetworkFactory, PositionFactory,
@@ -189,6 +196,7 @@ class CourseSerializerTests(MinimalCourseSerializerTests):
             'url_redirects': [],
             'course_run_statuses': course.course_run_statuses,
             'editors': CourseEditorSerializer(course.editors, many=True, read_only=True).data,
+            'collaborators': [],
         })
 
         return expected
@@ -599,7 +607,7 @@ class MinimalCourseRunSerializerTests(MinimalCourseRunBaseTestSerializer):
 
         partner.lms_url = 'http://127.0.0.1:8000'
         lms_course_url = get_lms_course_url_for_archived(partner, course_key)
-        expected_url = '{lms_url}/courses/{course_key}/course/'.format(lms_url=partner.lms_url, course_key=course_key)
+        expected_url = f'{partner.lms_url}/courses/{course_key}/course/'
         self.assertEqual(lms_course_url, expected_url)
 
 
@@ -855,7 +863,7 @@ class FlattenedCourseRunWithCourseSerializerTests(TestCase):  # pragma: no cover
 
 class MinimalProgramCourseSerializerTests(TestCase):
     def setUp(self):
-        super(MinimalProgramCourseSerializerTests, self).setUp()
+        super().setUp()
         self.program = ProgramFactory(courses=[CourseFactory()])
 
     def assert_program_courses_serialized(self, program):
@@ -1019,6 +1027,7 @@ class MinimalProgramSerializerTests(TestCase):
             'degree': None,
             'curricula': [],
             'marketing_hook': program.marketing_hook,
+            'total_hours_of_effort': program.total_hours_of_effort,
         }
 
     def test_data(self):
@@ -1082,7 +1091,6 @@ class ProgramSerializerTests(MinimalProgramSerializerTests):
         """
         request = make_request()
         program = self.create_program()
-
         excluded_course_run = program.courses.all()[0].course_runs.all()[0]
         program.excluded_course_runs.add(excluded_course_run)
 
@@ -1295,6 +1303,9 @@ class ProgramSerializerTests(MinimalProgramSerializerTests):
         expected_degree_deadlines = DegreeDeadlineSerializer(degree.deadline, many=True).data
         expected_degree_costs = DegreeCostSerializer(degree.cost, many=True).data
 
+        url = re.compile(r"https?:\/\/[^\/]*")
+        expected_micromasters_path = url.sub('', degree.micromasters_url)
+
         # Tack in degree data
         expected['curricula'] = [expected_curriculum]
         expected['degree'] = {
@@ -1311,6 +1322,7 @@ class ProgramSerializerTests(MinimalProgramSerializerTests):
             'lead_capture_list_name': degree.lead_capture_list_name,
             'lead_capture_image': lead_capture_image_field.to_representation(degree.lead_capture_image),
             'hubspot_lead_capture_form_id': degree.hubspot_lead_capture_form_id,
+            'micromasters_path': expected_micromasters_path,
             'micromasters_url': degree.micromasters_url,
             'micromasters_long_title': degree.micromasters_long_title,
             'micromasters_long_description': degree.micromasters_long_description,
@@ -1322,6 +1334,18 @@ class ProgramSerializerTests(MinimalProgramSerializerTests):
             'deadlines_fine_print': degree.deadlines_fine_print,
             'title_background_image': degree.title_background_image,
         }
+        self.assertDictEqual(serializer.data, expected)
+
+    def test_data_with_card_image(self):
+        program = self.create_program()
+        request = make_request()
+        card_image_file = make_image_file('test_card.jpg')
+        program.card_image = card_image_file
+        serializer = self.serializer_class(program, context={'request': request})
+        expected = self.get_expected_data(program, request)
+        expected.update({
+            'card_image_url': '/media/test_card.jpg'
+        })
         self.assertDictEqual(serializer.data, expected)
 
 
@@ -1539,11 +1563,21 @@ class MinimalOrganizationSerializerTests(TestCase):
 
     @classmethod
     def get_expected_data(cls, organization):
+        certificate_logo_image_url = getattr(
+            getattr(
+                organization,
+                'certificate_logo_image',
+                None
+            ),
+            'url',
+            None
+        )
         return {
             'uuid': str(organization.uuid),
             'key': organization.key,
             'name': organization.name,
             'auto_generate_course_run_keys': organization.auto_generate_course_run_keys,
+            'certificate_logo_image_url': certificate_logo_image_url
         }
 
     def test_data(self):
@@ -1821,7 +1855,7 @@ class AffiliateWindowSerializerTests(TestCase):
         assert all((course_run.title, course_run.short_description, course_run.marketing_url))
 
         expected = {
-            'pid': '{}-{}'.format(course_run.key, seat.type.slug),
+            'pid': f'{course_run.key}-{seat.type.slug}',
             'name': course_run.title,
             'desc': course_run.full_description,
             'purl': course_run.marketing_url,
@@ -1885,7 +1919,7 @@ class ProgramsAffiliateWindowSerializerTests(TestCase):
             'imgurl': program.banner_image.url,
             'category': 'Other Experiences',
             'lang': program.languages.pop().code.split('-')[0].lower(),
-            'custom1': program.type,
+            'custom1': program.type.slug,
         }
         assert serializer.data == expected
 
@@ -1895,12 +1929,13 @@ class CourseSearchSerializerMixin:
 
     def serialize_course(self, course, request):
         """ Serializes the given `Course` as a search result. """
-        result = SearchQuerySet().models(Course).filter(key=course.key)[0]
+        result = CourseDocument.search().filter('term', **{'key.raw': course.key}).execute()[0]
+
         return self.serializer_class(result, context={'request': request})  # pylint: disable=not-callable
 
 
-class CourseSearchSerializerTests(TestCase, CourseSearchSerializerMixin):
-    serializer_class = CourseSearchSerializer
+class CourseSearchDocumentSerializerTests(ElasticsearchTestMixin, TestCase, CourseSearchSerializerMixin):
+    serializer_class = CourseSearchDocumentSerializer
 
     def test_data(self):
         request = make_request()
@@ -1964,7 +1999,7 @@ class CourseSearchSerializerTests(TestCase, CourseSearchSerializerMixin):
             'short_description': course.short_description,
             'full_description': course.full_description,
             'content_type': 'course',
-            'aggregation_key': 'course:{}'.format(course.key),
+            'aggregation_key': f'course:{course.key}',
             'card_image_url': course.card_image_url,
             'image_url': course.image_url,
             'course_runs': [],
@@ -2006,18 +2041,19 @@ class CourseSearchSerializerTests(TestCase, CourseSearchSerializerMixin):
             'short_description': course.short_description,
             'full_description': course.full_description,
             'content_type': 'course',
-            'aggregation_key': 'course:{}'.format(course.key),
+            'aggregation_key': f'course:{course.key}',
             'card_image_url': course.card_image_url,
             'image_url': course.image_url,
             'course_runs': [{
                 'key': course_run.key,
-                'enrollment_start': course_run.enrollment_start,
-                'enrollment_end': course_run.enrollment_end,
+                'enrollment_start': serialize_datetime(course_run.enrollment_start),
+                'enrollment_end': serialize_datetime(course_run.enrollment_end),
                 'go_live_date': course_run.go_live_date,
-                'start': course_run.start,
-                'end': course_run.end,
-                'modified': course_run.modified,
+                'start': serialize_datetime(course_run.start),
+                'end': serialize_datetime(course_run.end),
+                'modified': serialize_datetime(course_run.modified),
                 'availability': course_run.availability,
+                'status': course_run.status,
                 'pacing_type': course_run.pacing_type,
                 'enrollment_mode': course_run.type_legacy,
                 'min_effort': course_run.min_effort,
@@ -2046,7 +2082,7 @@ class CourseSearchSerializerTests(TestCase, CourseSearchSerializerMixin):
             ],
             'outcome': course.outcome,
             'level_type': course.level_type.name,
-            'modified': course.modified.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'modified': course.modified,
         }
 
         serializer = self.serialize_course(course, request)
@@ -2060,18 +2096,19 @@ class CourseSearchSerializerTests(TestCase, CourseSearchSerializerMixin):
             'short_description': course.short_description,
             'full_description': course.full_description,
             'content_type': 'course',
-            'aggregation_key': 'course:{}'.format(course.key),
+            'aggregation_key': f'course:{course.key}',
             'card_image_url': course.card_image_url,
             'image_url': course.image_url,
             'course_runs': [{
                 'key': course_run.key,
-                'enrollment_start': course_run.enrollment_start,
-                'enrollment_end': course_run.enrollment_end,
+                'enrollment_start': serialize_datetime(course_run.enrollment_start),
+                'enrollment_end': serialize_datetime(course_run.enrollment_end),
                 'go_live_date': course_run.go_live_date,
-                'start': course_run.start,
-                'end': course_run.end,
-                'modified': course_run.modified,
+                'start': serialize_datetime(course_run.start),
+                'end': serialize_datetime(course_run.end),
+                'modified': serialize_datetime(course_run.modified),
                 'availability': course_run.availability,
+                'status': course_run.status,
                 'pacing_type': course_run.pacing_type,
                 'enrollment_mode': course_run.type_legacy,
                 'min_effort': course_run.min_effort,
@@ -2097,7 +2134,7 @@ class CourseSearchSerializerTests(TestCase, CourseSearchSerializerMixin):
         }
 
 
-class CourseSearchModelSerializerTests(TestCase, CourseSearchSerializerMixin):
+class CourseSearchModelSerializerTests(ElasticsearchTestMixin, TestCase, CourseSearchSerializerMixin):
     serializer_class = CourseSearchModelSerializer
 
     def test_data(self):
@@ -2116,8 +2153,8 @@ class CourseSearchModelSerializerTests(TestCase, CourseSearchSerializerMixin):
         return expected_data
 
 
-class CourseRunSearchSerializerTests(ElasticsearchTestMixin, TestCase):
-    serializer_class = CourseRunSearchSerializer
+class CourseRunSearchDocumentSerializerTests(ElasticsearchTestMixin, TestCase):
+    serializer_class = CourseRunSearchDocumentSerializer
 
     def test_data(self):
         request = make_request()
@@ -2138,7 +2175,7 @@ class CourseRunSearchSerializerTests(ElasticsearchTestMixin, TestCase):
 
     def serialize_course_run(self, course_run, request):
         """ Serializes the given `CourseRun` as a search result. """
-        result = SearchQuerySet().models(CourseRun).filter(key=course_run.key)[0]
+        result = CourseRunDocument.search().filter('term', **{'key.raw': course_run.key}).execute()[0]
         serializer = self.serializer_class(result, context={'request': request})
         return serializer
 
@@ -2177,7 +2214,7 @@ class CourseRunSearchSerializerTests(ElasticsearchTestMixin, TestCase):
             'authoring_organization_uuids': get_uuids(course_run.authoring_organizations.all()),
             'subject_uuids': get_uuids(course_run.subjects.all()),
             'staff_uuids': get_uuids(course_run.staff.all()),
-            'aggregation_key': 'courserun:{}'.format(course_run.course.key),
+            'aggregation_key': f'courserun:{course_run.course.key}',
             'has_enrollable_seats': course_run.has_enrollable_seats,
             'first_enrollable_paid_seat_sku': course_run.first_enrollable_paid_seat_sku(),
             'first_enrollable_paid_seat_price': course_run.first_enrollable_paid_seat_price,
@@ -2185,7 +2222,7 @@ class CourseRunSearchSerializerTests(ElasticsearchTestMixin, TestCase):
         }
 
 
-class CourseRunSearchModelSerializerTests(CourseRunSearchSerializerTests):
+class CourseRunSearchModelSerializerTests(CourseRunSearchDocumentSerializerTests):
     serializer_class = CourseRunSearchModelSerializer
 
     @classmethod
@@ -2196,8 +2233,8 @@ class CourseRunSearchModelSerializerTests(CourseRunSearchSerializerTests):
         return dict(expected_data)
 
 
-class PersonSearchSerializerTest(ElasticsearchTestMixin, TestCase):
-    serializer_class = PersonSearchSerializer
+class PersonSearchDocumentSerializerTest(ElasticsearchTestMixin, TestCase):
+    serializer_class = PersonSearchDocumentSerializer
 
     @classmethod
     def get_expected_data(cls, person, request):
@@ -2220,13 +2257,13 @@ class PersonSearchSerializerTest(ElasticsearchTestMixin, TestCase):
         person = position.person
         self.reindex_people(person)
 
-        result = SearchQuerySet().models(Person)[0]
+        result = PersonDocument.search().query(ESDSLQ('match_all')).execute()[0]
         serializer = self.serializer_class(result, context={'request': request})
         # Get data
         assert serializer.data == self.get_expected_data(person, request)
 
 
-class PersonSearchModelSerializerTests(PersonSearchSerializerTest):
+class PersonSearchModelSerializerTests(PersonSearchDocumentSerializerTest):
     serializer_class = PersonSearchModelSerializer
 
     @classmethod
@@ -2261,9 +2298,9 @@ class PersonSearchModelSerializerTests(PersonSearchSerializerTest):
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('haystack_default_connection')
-class TestProgramSearchSerializer(TestCase):
-    serializer_class = ProgramSearchSerializer
+@pytest.mark.usefixtures('elasticsearch_dsl_default_connection')
+class TestProgramSearchDocumentSerializer(TestCase):
+    serializer_class = ProgramSearchDocumentSerializer
 
     def setUp(self):
         super().setUp()
@@ -2290,7 +2327,7 @@ class TestProgramSearchSerializer(TestCase):
             'staff_uuids': get_uuids(
                 itertools.chain.from_iterable(course.staff.all() for course in list(program.course_runs))
             ),
-            'aggregation_key': 'program:{}'.format(program.uuid),
+            'aggregation_key': f'program:{program.uuid}',
             'weeks_to_complete_min': program.weeks_to_complete_min,
             'weeks_to_complete_max': program.weeks_to_complete_max,
             'min_hours_effort_per_week': program.min_hours_effort_per_week,
@@ -2303,7 +2340,7 @@ class TestProgramSearchSerializer(TestCase):
 
     def serialize_program(self, program, request):
         """ Serializes the given `Program` as a search result. """
-        result = SearchQuerySet().models(Program).filter(uuid=program.uuid)[0]
+        result = ProgramDocument.search().filter('term', uuid=program.uuid).execute()[0]
         serializer = self.serializer_class(result, context={'request': request})
         return serializer
 
@@ -2340,7 +2377,7 @@ class TestProgramSearchSerializer(TestCase):
             assert {'en-us', 'zh-cmn'} == {*expected['languages']}
 
 
-class ProgramSearchModelSerializerTest(TestProgramSearchSerializer):
+class ProgramSearchModelSerializerTest(TestProgramSearchDocumentSerializer):
     serializer_class = ProgramSearchModelSerializer
 
     @classmethod
@@ -2352,7 +2389,7 @@ class ProgramSearchModelSerializerTest(TestProgramSearchSerializer):
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('haystack_default_connection')
+@pytest.mark.usefixtures('elasticsearch_dsl_default_connection')
 class TestTypeaheadCourseRunSearchSerializer:
     serializer_class = TypeaheadCourseRunSearchSerializer
 
@@ -2373,13 +2410,13 @@ class TestTypeaheadCourseRunSearchSerializer:
 
     def serialize_course_run(self, course_run):
         """ Serializes the given `CourseRun` as a typeahead result. """
-        result = SearchQuerySet().models(CourseRun).filter(key=course_run.key)[0]
+        result = CourseRunDocument.search().filter('term', **{'key.raw': course_run.key}).execute()[0]
         serializer = self.serializer_class(result)
         return serializer
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures('haystack_default_connection')
+@pytest.mark.usefixtures('elasticsearch_dsl_default_connection')
 class TestTypeaheadProgramSearchSerializer:
     serializer_class = TypeaheadProgramSearchSerializer
 
@@ -2409,7 +2446,7 @@ class TestTypeaheadProgramSearchSerializer:
 
     def serialize_program(self, program):
         """ Serializes the given `Program` as a typeahead result. """
-        result = SearchQuerySet().models(Program).filter(uuid=program.uuid)[0]
+        result = ProgramDocument.search().filter('term', uuid=program.uuid).execute()[0]
         serializer = self.serializer_class(result)
         return serializer
 
@@ -2418,7 +2455,7 @@ class TestTypeaheadProgramSearchSerializer:
 class TestGetUTMSourceForUser(LMSAPIClientMixin, TestCase):
 
     def setUp(self):
-        super(TestGetUTMSourceForUser, self).setUp()
+        super().setUp()
         self.user = UserFactory.create()
         self.partner = PartnerFactory.create()
 
@@ -2459,9 +2496,34 @@ class TestGetUTMSourceForUser(LMSAPIClientMixin, TestCase):
         """
         self.partner.lms_url = 'http://127.0.0.1:8000'
         company_name = 'Test Company'
-        expected_utm_source = slugify('{} {}'.format(self.user.username, company_name))
+        expected_utm_source = slugify(f'{self.user.username} {company_name}')
 
         self.mock_api_access_request(
             self.partner.lms_url, self.user, api_access_request_overrides={'company_name': company_name},
         )
         assert get_utm_source_for_user(self.partner, self.user) == expected_utm_source
+
+
+class CollaboratorSerializerTests(TestCase):
+    serializer_class = CollaboratorSerializer
+
+    def test_data(self):
+        self.maxDiff = None
+
+        request = make_request()
+
+        image_field = StdImageSerializerField()
+        image_field._context = {'request': request}  # pylint: disable=protected-access
+
+        collaborator = CollaboratorFactory()
+        serializer = self.serializer_class(collaborator, context={'request': request})
+        image = image_field.to_representation(collaborator.image)
+
+        expected = {
+            'name': collaborator.name,
+            'image': image,
+            'image_url': collaborator.image_url,
+            'uuid': str(collaborator.uuid)
+        }
+
+        self.assertDictEqual(serializer.data, expected)

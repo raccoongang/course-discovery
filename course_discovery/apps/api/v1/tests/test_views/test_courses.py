@@ -1,5 +1,6 @@
 import datetime
 import json
+from unittest import mock
 
 import ddt
 import pytest
@@ -8,7 +9,7 @@ import responses
 from django.conf import settings
 from django.db import IntegrityError
 from django.db.models.functions import Lower
-from mock import mock
+from django.db.models.query import Prefetch
 from rest_framework.reverse import reverse
 from testfixtures import LogCapture
 
@@ -32,7 +33,7 @@ from course_discovery.apps.publisher.tests.factories import OrganizationExtensio
 @pytest.mark.usefixtures('django_cache')
 class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
     def setUp(self):
-        super(CourseViewSetTests, self).setUp()
+        super().setUp()
         self.user = UserFactory(is_staff=True)
         self.request.user = self.user
         self.client.login(username=self.user.username, password=USER_PASSWORD)
@@ -40,15 +41,26 @@ class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
         self.verified_type = CourseType.objects.get(slug=CourseType.VERIFIED_AUDIT)
         self.course = CourseFactory(partner=self.partner, title='Fake Test', key='edX+Fake101', type=self.audit_type)
         self.org = OrganizationFactory(key='edX', partner=self.partner)
-        self.course.authoring_organizations.add(self.org)  # pylint: disable=no-member
+        self.course.authoring_organizations.add(self.org)
 
     def tearDown(self):
-        super(CourseViewSetTests, self).tearDown()
+        super().tearDown()
         self.client.logout()
 
     def mock_ecommerce_publication(self):
-        url = '{root}publication/'.format(root=self.course.partner.ecommerce_api_url)
+        url = f'{self.course.partner.ecommerce_api_url}publication/'
         responses.add(responses.POST, url, json={}, status=200)
+
+    def serialize_course(self, course, many=False, format=None, extra_context=None):  # pylint: disable=redefined-builtin
+        # The course view sorts courses by key and their course runs by start date. Let's emulate that here.
+        queryset = Course.everything.prefetch_related(
+            Prefetch('course_runs', queryset=CourseRun.everything.order_by('start', 'id')),
+        )
+        if many:
+            obj = queryset.filter(id__in=[c.id for c in course]).order_by(Lower('key'))
+        else:
+            obj = queryset.get(id=course.id)
+        return super().serialize_course(obj, many=many, format=format, extra_context=extra_context)
 
     def test_get(self):
         """ Verify the endpoint returns the details for a single course. """
@@ -148,7 +160,7 @@ class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
         SeatFactory(course_run=closed_course_run)
 
         url = reverse('api:v1:course-detail', kwargs={'key': self.course.key})
-        url = '{}?marketable_course_runs_only={}'.format(url, marketable_course_runs_only)
+        url = f'{url}?marketable_course_runs_only={marketable_course_runs_only}'
         response = self.client.get(url)
 
         assert response.status_code == 200
@@ -205,7 +217,7 @@ class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
         unpublished_course_run = CourseRunFactory(status=CourseRunStatus.Unpublished, course=self.course)
 
         url = reverse('api:v1:course-detail', kwargs={'key': self.course.key})
-        url = '{}?published_course_runs_only={}'.format(url, published_course_runs_only)
+        url = f'{url}?published_course_runs_only={published_course_runs_only}'
 
         response = self.client.get(url)
 
@@ -217,6 +229,24 @@ class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
 
         assert response.data == self.serialize_course(self.course)
 
+    def test_course_runs_are_ordered(self):
+        """
+        Verify that course runs inside the course are ordered by start date.
+        """
+        run1 = CourseRunFactory(course=self.course, start=datetime.datetime(2003, 1, 1, tzinfo=pytz.UTC))
+        run2 = CourseRunFactory(course=self.course, start=datetime.datetime(2000, 1, 1, tzinfo=pytz.UTC))
+        run3 = CourseRunFactory(course=self.course, start=datetime.datetime(2007, 1, 1, tzinfo=pytz.UTC))
+        run4 = CourseRunFactory(course=self.course, start=datetime.datetime(2006, 1, 1, tzinfo=pytz.UTC))
+        run5 = CourseRunFactory(course=self.course, start=datetime.datetime(2004, 1, 1, tzinfo=pytz.UTC))
+        run6 = CourseRunFactory(course=self.course, start=datetime.datetime(2005, 1, 1, tzinfo=pytz.UTC))
+        expected_keys = [run2.key, run1.key, run5.key, run6.key, run4.key, run3.key]
+
+        url = reverse('api:v1:course-detail', kwargs={'key': self.course.key})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.data['course_run_keys'], expected_keys)
+        self.assertListEqual([run['key'] for run in response.data['course_runs']], expected_keys)
+
     def test_list(self):
         """ Verify the endpoint returns a list of all courses. """
         url = reverse('api:v1:course-list')
@@ -226,42 +256,39 @@ class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(
             response.data['results'],
-            self.serialize_course(Course.objects.all().order_by(Lower('key')), many=True)
+            self.serialize_course(Course.objects.all(), many=True)
         )
 
     def test_list_query(self):
         """ Verify the endpoint returns a filtered list of courses """
         title = 'Some random title'
         courses = CourseFactory.create_batch(3, title=title)
-        courses = sorted(courses, key=lambda course: course.key.lower())
         query = 'title:' + title
         url = '{root}?q={query}'.format(root=reverse('api:v1:course-list'), query=query)
 
         # Known to be flaky prior to the addition of tearDown()
         # and logout() code which is the same number of additional queries
-        with self.assertNumQueries(39):
+        with self.assertNumQueries(42):
             response = self.client.get(url)
         self.assertListEqual(response.data['results'], self.serialize_course(courses, many=True))
 
     def test_list_key_filter(self):
         """ Verify the endpoint returns a list of courses filtered by the specified keys. """
         courses = CourseFactory.create_batch(3, partner=self.partner)
-        courses = sorted(courses, key=lambda course: course.key.lower())
         keys = ','.join([course.key for course in courses])
         url = '{root}?keys={keys}'.format(root=reverse('api:v1:course-list'), keys=keys)
 
-        with self.assertNumQueries(39):
+        with self.assertNumQueries(42):
             response = self.client.get(url)
         self.assertListEqual(response.data['results'], self.serialize_course(courses, many=True))
 
     def test_list_uuid_filter(self):
         """ Verify the endpoint returns a list of courses filtered by the specified uuid. """
         courses = CourseFactory.create_batch(3, partner=self.partner)
-        courses = sorted(courses, key=lambda course: course.key.lower())
         uuids = ','.join([str(course.uuid) for course in courses])
         url = '{root}?uuids={uuids}'.format(root=reverse('api:v1:course-list'), uuids=uuids)
 
-        with self.assertNumQueries(39):
+        with self.assertNumQueries(42):
             response = self.client.get(url)
         self.assertListEqual(response.data['results'], self.serialize_course(courses, many=True))
 
@@ -606,7 +633,7 @@ class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
         studio_url = '{root}/api/v1/course_runs/'.format(root=self.partner.studio_url.strip('/'))
         responses.add(responses.POST, studio_url, status=200)
         key = 'course-v1:{org}+{number}+1T2001'.format(org=course_data['org'], number=course_data['number'])
-        responses.add(responses.POST, '{url}{key}/images/'.format(url=studio_url, key=key), status=200)
+        responses.add(responses.POST, f'{studio_url}{key}/images/', status=200)
         return self.create_course(course_data, update)
 
     def test_multiple_authoring_orgs_get_pulled_in_order(self):
@@ -720,6 +747,60 @@ class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
         course = Course.everything.last()
         course.refresh_from_db()
         self.assertEqual(course.active_url_slug, 'course-title')
+
+    def test_add_collaborator_uuid_list(self):
+        self.mock_access_token()
+        collaborator = {
+            'name': 'Collaborator 1',
+            # The API is expecting the image to be base64 encoded. We are simulating that here.
+            'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY'
+                     '42YAAAAASUVORK5CYII=',
+        }
+        collaborator_url = reverse('api:v1:collaborator-list')
+        collab_post_response = self.client.post(collaborator_url, collaborator, format='json')
+        self.assertEqual(collab_post_response.status_code, 201)
+        get_collab_response = self.client.get(collaborator_url)
+        collab_json = get_collab_response.json()
+        self.assertEqual(len(collab_json['results']), 1)
+        collaborator_to_use = collab_json['results'][0]
+        response = self.create_course({'collaborators': [collaborator_to_use['uuid']]})
+        self.assertEqual(response.status_code, 201)
+        course = response.json()
+        self.assertEqual(course['collaborators'][0]['name'], 'Collaborator 1')
+
+    def test_modify_collaborator_uuid_list(self):
+        self.mock_access_token()
+        collaborator = {
+            'name': 'Collaborator 1',
+            # The API is expecting the image to be base64 encoded. We are simulating that here.
+            'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY'
+                     '42YAAAAASUVORK5CYII=',
+        }
+        collaborator2 = {
+            'name': 'Collaborator 2',
+            # The API is expecting the image to be base64 encoded. We are simulating that here.
+            'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY'
+                     '42YAAAAASUVORK5CYII=',
+        }
+        collaborator_url = reverse('api:v1:collaborator-list')
+        collab_post_response = self.client.post(collaborator_url, collaborator, format='json')
+        collab_post_response2 = self.client.post(collaborator_url, collaborator2, format='json')
+        self.assertEqual(collab_post_response.status_code, 201)
+        get_collab_response = self.client.get(collaborator_url)
+        collab_json = get_collab_response.json()
+        self.assertEqual(len(collab_json['results']), 2)
+        collaborator_to_use = collab_json['results'][0]
+        response = self.create_course({'collaborators': [collaborator_to_use['uuid']]})
+        self.assertEqual(response.status_code, 201)
+        course = response.json()
+        collab1 = collab_post_response.json()
+        collab2 = collab_post_response2.json()
+        self.assertEqual(course['collaborators'][0]['uuid'], collaborator_to_use['uuid'])
+        course_url = reverse('api:v1:course-detail', kwargs={'key': course['uuid']})
+        modify_course_data = {'collaborators': [collab1['uuid'], collab2['uuid']]}
+        response = self.client.patch(course_url, modify_course_data, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['collaborators']), 2)
 
     def test_create_saves_manual_url_slug(self):
         self.mock_access_token()
@@ -1436,7 +1517,7 @@ class CourseViewSetTests(OAuth2Mixin, SerializationMixin, APITestCase):
         with LogCapture(course_logger.name) as log_capture:
             response = self.client.patch(url, {'type': '00000000-0000-0000-0000-000000000000'}, format='json')
             self.assertEqual(response.status_code, 400)
-            log_capture.check(
+            log_capture.check_present(
                 (
                     course_logger.name,
                     'ERROR',

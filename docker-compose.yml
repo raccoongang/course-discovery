@@ -2,7 +2,7 @@ version: "2"
 
 services:
   db:
-    image: mysql:5.6
+    image: mysql:5.7
     container_name: db
     command: mysqld --character-set-server=utf8 --collation-server=utf8_general_ci
     environment:
@@ -17,18 +17,23 @@ services:
       - ./.dev/volumes/db:/var/lib/mysql
 
   es:
-    image: elasticsearch:1.7.6
+    image: elasticsearch:7.8.0
     container_name: es
     volumes:
       - ./.dev/volumes/es/data:/usr/share/elasticsearch/data
       - ./.dev/volumes/es/logs:/usr/share/elasticsearch/logs
       - ./.dev/volumes/es/plugins:/usr/share/elasticsearch/plugins
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - http.port=9200
     ports:
       - "9200:9200"
       - "9300:9300"
 
   memcached:
-    image: memcached:1.6.6
+    image: memcached:1.6.8
     container_name: memcached
 
   course-discovery:

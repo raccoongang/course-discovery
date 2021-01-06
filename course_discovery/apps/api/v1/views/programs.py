@@ -1,6 +1,11 @@
+import base64
+
+from django.core.files.base import ContentFile
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters as rest_framework_filters
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -33,10 +38,10 @@ class ProgramViewSet(CompressedCacheResponseMixin, viewsets.ReadOnlyModelViewSet
         # which happens when the queryset is stored in a class property.
         partner = self.request.site.partner
         q = self.request.query_params.get('q')
-        queryset = None
+        queryset = Program.objects.filter(partner=partner).order_by('id')
 
         if q:
-            queryset = Program.search(q)
+            queryset = Program.search(q, queryset=queryset)
 
         return self.get_serializer_class().prefetch_queryset(queryset=queryset, partner=partner)
 
@@ -106,4 +111,22 @@ class ProgramViewSet(CompressedCacheResponseMixin, viewsets.ReadOnlyModelViewSet
 
             return Response(uuids)
 
-        return super(ProgramViewSet, self).list(request, *args, **kwargs)
+        return super().list(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'])
+    def update_card_image(self, request, *_args, **_kwargs):
+        if not self.request.user.is_staff:
+            raise PermissionDenied
+        program = self.get_object()
+        image_data = request.data.get('image', None)
+        if image_data and isinstance(image_data, str) and image_data.startswith('data:image'):
+            # base64 encoded image - decode
+            file_format, imgstr = image_data.split(';base64,')  # format ~= data:image/X;base64,/xxxyyyzzz/
+            ext = file_format.split('/')[-1]  # guess file extension
+            image_data = ContentFile(base64.b64decode(imgstr), name=f'tmp.{ext}')
+            program.card_image.save(image_data.name, image_data)
+            msg = 'Successfully updated program card image for program {uuid}: {title}'.format(uuid=program.uuid,
+                                                                                               title=program.title)
+            return Response(msg)
+        else:
+            return Response('Bad image data in request', status=status.HTTP_400_BAD_REQUEST)

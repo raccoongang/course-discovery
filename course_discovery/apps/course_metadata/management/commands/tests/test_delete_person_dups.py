@@ -1,4 +1,5 @@
-import mock
+from unittest import mock
+
 from django.core.exceptions import ValidationError
 from django.core.management import CommandError, call_command
 from django.test import TestCase
@@ -48,8 +49,8 @@ class DeletePersonDupsCommandTests(TestCase):
         call_command('delete_person_dups', *args)
 
     def test_invalid_args(self):
-        partner_code = '--partner-code={}'.format(self.partner.short_code)
-        uuid_arg = '{}:{}'.format(self.person.uuid, self.target.uuid)
+        partner_code = f'--partner-code={self.partner.short_code}'
+        uuid_arg = f'{self.person.uuid}:{self.target.uuid}'
 
         with self.assertRaises(CommandError) as cm:
             self.call_command(partner_code)  # no uuid
@@ -117,7 +118,6 @@ class DeletePersonDupsCommandTests(TestCase):
         ])
 
     def test_target_already_present(self):
-        # pylint: disable=no-member
         # Change everything to include target. We expect that target's place isn't altered.
         self.courserun1.staff.set(list(self.courserun1.staff.all()) + [self.target])
         self.courserun2.staff.set(list(self.courserun2.staff.all()) + [self.target])

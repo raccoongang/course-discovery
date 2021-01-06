@@ -2,9 +2,9 @@ import datetime
 import json
 import urllib.parse
 from collections import defaultdict
+from unittest import mock
 
 import ddt
-import mock
 import pytz
 from django.urls import reverse
 
@@ -22,8 +22,9 @@ from course_discovery.apps.course_metadata.tests.factories import (
     CourseFactory, CourseRunFactory, CurriculumCourseMembershipFactory, CurriculumCourseRunExclusionFactory,
     CurriculumFactory, OrganizationFactory, ProgramFactory, ProgramTypeFactory, SeatTypeFactory
 )
-from course_discovery.apps.edx_catalog_extensions.api.serializers import DistinctCountsAggregateFacetSearchSerializer
-from course_discovery.apps.edx_catalog_extensions.api.v1.views import ProgramFixtureView
+from course_discovery.apps.edx_catalog_extensions.api.v1.views import (
+    DistinctCountsAggregateSearchViewSet, ProgramFixtureView
+)
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 
 
@@ -33,7 +34,7 @@ class DistinctCountsAggregateSearchViewSetTests(SerializationMixin, LoginMixin,
 
     def get_response(self, query=None):
         query = urllib.parse.urlencode(query) if query else ''
-        url = '{path}?{qs}'.format(path=self.path, qs=query)
+        url = f'{self.path}?{query}'
         return self.client.get(url)
 
     def process_response(self, query):
@@ -77,7 +78,7 @@ class DistinctCountsAggregateSearchViewSetTests(SerializationMixin, LoginMixin,
         response = self.get_response()
         assert response.status_code == 200
 
-        expected_facets = DistinctCountsAggregateFacetSearchSerializer.Meta.field_options.keys()
+        expected_facets = DistinctCountsAggregateSearchViewSet.faceted_search_fields.keys()
         assert sorted(expected_facets) == sorted(response.data['fields'].keys())
 
         content_types = {facet['text']: facet for facet in response.data['fields']['content_type']}
@@ -108,7 +109,7 @@ class DistinctCountsAggregateSearchViewSetTests(SerializationMixin, LoginMixin,
         response = self.get_response()
         assert response.status_code == 200
 
-        expected_facets = DistinctCountsAggregateFacetSearchSerializer.Meta.field_queries.keys()
+        expected_facets = DistinctCountsAggregateSearchViewSet.faceted_query_filter_fields.keys()
         for facet_name in expected_facets:
             facet = response.data['queries'][facet_name]
             assert facet['count'] == 2
@@ -182,9 +183,9 @@ class DistinctCountsAggregateSearchViewSetTests(SerializationMixin, LoginMixin,
     def test_pagination(self):
         """ Verify that the response is paginated correctly."""
         for i, course in enumerate([CourseFactory(partner=self.partner), CourseFactory(partner=self.partner)]):
-            self.build_courserun(title='{}a'.format(i), course=course)
-            self.build_courserun(title='{}b'.format(i), course=course)
-            self.build_courserun(title='{}c'.format(i), course=course)
+            self.build_courserun(title=f'{i}a', course=course)
+            self.build_courserun(title=f'{i}b', course=course)
+            self.build_courserun(title=f'{i}c', course=course)
         self.build_program(title='program', partner=self.partner)
 
         response_all = self.get_response()
@@ -299,7 +300,7 @@ class ProgramFixtureViewTests(APITestCase):
         path = reverse('extensions:api:v1:get-program-fixture')
         if uuids:
             uuids_str = ",".join(str(uuid) for uuid in uuids)
-            url = "{}?programs={}".format(path, uuids_str)
+            url = f"{path}?programs={uuids_str}"
         else:
             url = path
         return self.client.get(url)
