@@ -122,20 +122,29 @@ class CoursesApiDataLoader(AbstractDataLoader):
             official_run, draft_run = self.get_course_run(body)
             if official_run or draft_run:
                 self.update_course_run(official_run, draft_run, body)
-                if not self.partner.uses_publisher:
-                    # Without publisher, we'll use Studio as the source of truth for course data
-                    official_course = getattr(official_run, 'canonical_for_course', None)
-                    draft_course = getattr(draft_run, 'canonical_for_course', None)
-                    if official_course or draft_course:
-                        self.update_course(official_course, draft_course, body)
+                course_run = official_run or draft_run
+                course, _ = self.get_or_create_course(body)
             else:
                 course, created = self.get_or_create_course(body)
                 course_run = self.create_course_run(course, body)
                 if created:
                     logger.info(f"Course created with uuid {course.uuid} and key {course.key}")
-                    logger.info(f"Course run created with uuid {course_run.uuid} and key {course_run.key}")
-                    course.canonical_course_run = course_run
-                    course.save(update_fields=['canonical_course_run'])
+
+            # Ensure course has a canonical run and update its metadata
+            if course:
+                if not course.canonical_course_run:
+                    try:
+                        course.canonical_course_run = course_run
+                        course.save(update_fields=['canonical_course_run'])
+                        logger.info(f"Assigned canonical run {course_run.key} to course {course.key}")
+                    except Exception:  # pylint: disable=broad-except
+                        logger.warning(f"Could not assign canonical run {course_run.key} to course {course.key}. It might be already assigned to another course.")
+                        # Reset the field in memory to avoid issues in subsequent calls
+                        course.canonical_course_run = None
+
+                if not self.partner.uses_publisher:
+                    # Without publisher, we use LMS/Studio as the source of truth for course data
+                    self.update_course(course, course.draft_version, body)
         except Exception:  # pylint: disable=broad-except
             if self.enable_api:
                 msg = 'An error occurred while updating {course_run} from {api_url}'.format(
