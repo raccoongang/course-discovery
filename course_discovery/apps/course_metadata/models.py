@@ -696,7 +696,7 @@ class Subject(TranslatableModel, TimeStampedModel):
     """ Subject model. """
     uuid = models.UUIDField(blank=False, null=False, default=uuid4, editable=False, verbose_name=_('UUID'))
     banner_image_url = models.URLField(blank=True, null=True)
-    card_image_url = models.URLField(blank=True, null=True)
+    card_image_url = models.URLField(max_length=512, blank=True, null=True)
     slug = AutoSlugField(populate_from='name', editable=True, blank=True, slugify_function=uslugify,
                          help_text=_('Leave this field blank to have the value generated automatically.'))
 
@@ -1446,7 +1446,7 @@ class Course(ManageHistoryMixin, DraftModelMixin, PkSearchableMixin, CachedMixin
     outcome = NullHtmlField()
     prerequisites_raw = NullHtmlField()
     syllabus_raw = NullHtmlField()
-    card_image_url = models.URLField(null=True, blank=True)
+    card_image_url = models.URLField(max_length=512, null=True, blank=True)
     image = StdImageField(
         upload_to=UploadToFieldNamePath(populate_from='uuid', path='media/course/image'),
         blank=True,
@@ -2295,7 +2295,7 @@ class CourseRun(ManageHistoryMixin, DraftModelMixin, CachedMixin, TimeStampedMod
     )
 
     # TODO Ditch this, and fallback to the course
-    card_image_url = models.URLField(null=True, blank=True)
+    card_image_url = models.URLField(max_length=512, null=True, blank=True)
     video = models.ForeignKey(Video, models.CASCADE, default=None, null=True, blank=True)
     video_translation_languages = models.ManyToManyField(
         LanguageTag, blank=True, related_name='+')
@@ -3367,7 +3367,7 @@ class Program(ManageHistoryMixin, PkSearchableMixin, TimeStampedModel):
             'card': (378, 225),
         }
     )
-    card_image_url = models.URLField(null=True, blank=True, help_text=_('DEPRECATED: Use the card image field'))
+    card_image_url = models.URLField(max_length=512, null=True, blank=True, help_text=_('DEPRECATED: Use the card image field'))
     video = models.ForeignKey(Video, models.CASCADE, default=None, null=True, blank=True)
     expected_learning_items = SortedManyToManyField(ExpectedLearningItem, blank=True)
     faq = SortedManyToManyField(FAQ, blank=True)
