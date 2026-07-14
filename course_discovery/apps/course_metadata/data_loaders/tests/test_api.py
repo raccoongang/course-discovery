@@ -1128,8 +1128,13 @@ class EcommerceApiDataLoaderTests(DataLoaderTestMixin, TestCase):
         audit_run.course.type = CourseType.objects.get(slug=CourseType.PROFESSIONAL)
         audit_run.course.save()
 
-        with pytest.raises(CommandError):
+        # A single un-typeable course must no longer abort the whole ingest: it is logged
+        # and skipped so the rest of the catalog still refreshes (and deletes still run).
+        with mock.patch(LOGGER_PATH) as mock_logger:
             self.loader.ingest()
+        mock_logger.warning.assert_any_call(
+            'Calculating course type failure occurred for [%s]; skipping.', mock.ANY
+        )
 
         # Audit will have failed to match and nothing should have changed
         audit_run = CourseRun.objects.get(key='audit/course/run')
@@ -1152,6 +1157,39 @@ class EcommerceApiDataLoaderTests(DataLoaderTestMixin, TestCase):
         audit_run = CourseRun.objects.get(key='audit/course/run')
         assert audit_run.type.slug == CourseType.AUDIT
         assert audit_run.course.type.slug == CourseType.AUDIT
+
+    def test_heal_free_course_seats(self):
+        """ Verify seatless runs of an all-free course get the course's free seat cloned. """
+        honor = SeatTypeFactory.honor()
+        course = CourseFactory(partner=self.partner)
+        seated_run = CourseRunFactory(course=course, key='honor/course/run1')
+        seatless_run = CourseRunFactory(course=course, key='honor/course/run2')
+        template = SeatFactory(course_run=seated_run, type=honor)
+        assert seatless_run.seats.count() == 0
+
+        self.loader._heal_free_course_seats(course)
+
+        cloned = seatless_run.seats.get()
+        assert cloned.type == honor
+        assert cloned.price == template.price
+        assert cloned.currency == template.currency
+        # The clone carries no ecommerce identity (there is no product for a free course).
+        assert cloned.sku is None
+
+        # Idempotent: a second pass adds nothing.
+        self.loader._heal_free_course_seats(course)
+        assert seatless_run.seats.count() == 1
+
+    def test_heal_free_course_seats_skips_paid_course(self):
+        """ Verify a course with any paid/entitlement seat is left untouched (manual review). """
+        course = CourseFactory(partner=self.partner)
+        seated_run = CourseRunFactory(course=course, key='paid/course/run1')
+        seatless_run = CourseRunFactory(course=course, key='paid/course/run2')
+        SeatFactory(course_run=seated_run, type=SeatTypeFactory.verified())
+
+        self.loader._heal_free_course_seats(course)
+
+        assert seatless_run.seats.count() == 0
 
 
 @ddt.ddt
