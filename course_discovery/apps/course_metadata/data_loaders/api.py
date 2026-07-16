@@ -130,6 +130,12 @@ class CoursesApiDataLoader(AbstractDataLoader):
                 if created:
                     logger.info(f"Course created with uuid {course.uuid} and key {course.key}")
 
+            # Materialize free (honor/audit) seats from the authoritative LMS
+            # enrollment modes. Discovery otherwise learns seats only from
+            # ecommerce, which carries no products for free courses -- so their
+            # runs stay seatless and untypeable. See update_free_seats.
+            self.update_free_seats(course_run, body)
+
             # Ensure course has a canonical run and update its metadata
             if course:
                 if not course.canonical_course_run:
@@ -331,6 +337,55 @@ class CoursesApiDataLoader(AbstractDataLoader):
             video, __ = Video.objects.get_or_create(src=video_url)
 
         return video
+
+    # Free enrollment modes whose seats are owned by this (LMS) loader rather
+    # than by the ecommerce loader. Ecommerce carries no products for these on
+    # free courses, so the LMS CourseMode table is their only source of truth.
+    FREE_SEAT_TYPES = frozenset({Seat.HONOR, Seat.AUDIT})
+
+    def update_free_seats(self, course_run, body):
+        """
+        Sync a run's free (honor/audit) seats from the authoritative LMS modes.
+
+        Paid seats (verified/professional/credit/...) stay owned by
+        EcommerceApiDataLoader; this only ever touches honor/audit. Idempotent,
+        and a no-op when the LMS payload carries no 'modes' key (an LMS that
+        predates the enrollment-modes field), so it degrades safely.
+        """
+        modes = body.get('modes')
+        if modes is None:
+            return
+        lms_free = {mode.get('slug') for mode in modes if mode.get('slug') in self.FREE_SEAT_TYPES}
+
+        try:
+            currency = Currency.objects.get(code='USD')
+        except Currency.DoesNotExist:  # pragma: no cover
+            logger.warning('Default currency USD not found; skipping free-seat sync for [%s].', course_run.key)
+            return
+
+        for slug in lms_free:
+            try:
+                seat_type = SeatType.objects.get(slug=slug)
+            except SeatType.DoesNotExist:
+                logger.warning('LMS reported unknown free seat type [%s] for run [%s]; skipping.', slug, course_run.key)
+                continue
+            seat, created = course_run.seats.update_or_create(
+                type=seat_type, currency=currency, defaults={'price': 0},
+            )
+            if course_run.draft_version:
+                draft_seat, __ = course_run.draft_version.seats.update_or_create(
+                    draft=True, type=seat_type, currency=currency, defaults={'price': 0},
+                )
+                seat.draft_version = draft_seat
+                seat.save()
+            if created:
+                logger.info('Created free [%s] seat for run [%s] from LMS modes.', slug, course_run.key)
+
+        # Prune free seats the LMS no longer reports -- but only on runs with no
+        # paid seat, so we never contend with an ecommerce-owned audit seat.
+        for run in filter(None, (course_run, course_run.draft_version)):
+            if not run.seats.exclude(type__slug__in=self.FREE_SEAT_TYPES).exists():
+                run.seats.filter(type__slug__in=self.FREE_SEAT_TYPES).exclude(type__slug__in=lms_free).delete()
 
 
 class EcommerceApiDataLoader(AbstractDataLoader):
@@ -562,11 +617,14 @@ class EcommerceApiDataLoader(AbstractDataLoader):
             product_body = self.clean_strings(product_body)
             self.update_seat(course_run, product_body)
 
-        # Remove seats which no longer exist for that course run
+        # Remove seats which no longer exist for that course run. Honor seats are
+        # owned by the LMS-modes loader (CoursesApiDataLoader.update_free_seats),
+        # not ecommerce, so keep them even though no ecommerce product backs them.
         certificate_types = [self.get_certificate_type(product) for product in body['products']
                              if product['structure'] == 'child']
+        keep_types = [*certificate_types, Seat.HONOR]
 
-        seats_to_remove = course_run.seats.exclude(type__slug__in=certificate_types)
+        seats_to_remove = course_run.seats.exclude(type__slug__in=keep_types)
         if seats_to_remove.count() > 0:
             logger.info(
                 'Removing seats [%s] for course run with key [%s].',
@@ -576,7 +634,7 @@ class EcommerceApiDataLoader(AbstractDataLoader):
         seats_to_remove.delete()
 
         if course_run.draft_version:
-            draft_seats_to_remove = course_run.draft_version.seats.exclude(type__slug__in=certificate_types)
+            draft_seats_to_remove = course_run.draft_version.seats.exclude(type__slug__in=keep_types)
             draft_seats_to_remove.delete()
 
     def update_seat(self, course_run, product_body):
