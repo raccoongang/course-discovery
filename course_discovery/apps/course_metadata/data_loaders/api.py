@@ -355,37 +355,67 @@ class CoursesApiDataLoader(AbstractDataLoader):
         modes = body.get('modes')
         if modes is None:
             return
-        lms_free = {mode.get('slug') for mode in modes if mode.get('slug') in self.FREE_SEAT_TYPES}
+        lms_free = {
+            mode.get('slug'): (mode.get('currency') or '').upper()
+            for mode in modes if mode.get('slug') in self.FREE_SEAT_TYPES
+        }
 
-        try:
-            currency = Currency.objects.get(code='USD')
-        except Currency.DoesNotExist:  # pragma: no cover
-            logger.warning('Default currency USD not found; skipping free-seat sync for [%s].', course_run.key)
-            return
-
-        for slug in lms_free:
+        for slug, currency_code in lms_free.items():
             try:
                 seat_type = SeatType.objects.get(slug=slug)
             except SeatType.DoesNotExist:
                 logger.warning('LMS reported unknown free seat type [%s] for run [%s]; skipping.', slug, course_run.key)
                 continue
-            seat, created = course_run.seats.update_or_create(
-                type=seat_type, currency=currency, defaults={'price': 0},
-            )
+            seat = self._ensure_free_seat(course_run, seat_type, currency_code, draft=False)
             if course_run.draft_version:
-                draft_seat, __ = course_run.draft_version.seats.update_or_create(
-                    draft=True, type=seat_type, currency=currency, defaults={'price': 0},
-                )
-                seat.draft_version = draft_seat
-                seat.save()
-            if created:
-                logger.info('Created free [%s] seat for run [%s] from LMS modes.', slug, course_run.key)
+                draft_seat = self._ensure_free_seat(course_run.draft_version, seat_type, currency_code, draft=True)
+                if seat and draft_seat and seat.draft_version_id != draft_seat.id:
+                    seat.draft_version = draft_seat
+                    seat.save()
 
         # Prune free seats the LMS no longer reports -- but only on runs with no
         # paid seat, so we never contend with an ecommerce-owned audit seat.
         for run in filter(None, (course_run, course_run.draft_version)):
             if not run.seats.exclude(type__slug__in=self.FREE_SEAT_TYPES).exists():
                 run.seats.filter(type__slug__in=self.FREE_SEAT_TYPES).exclude(type__slug__in=lms_free).delete()
+
+    def _ensure_free_seat(self, run, seat_type, currency_code, draft):
+        """
+        Return the run's free seat of `seat_type`, creating it at price 0 if absent.
+
+        Matches an existing seat by type only -- for a $0 seat the currency is
+        cosmetic, and reusing whatever is already present avoids creating a
+        duplicate against a migrated relic seat (e.g. an honor seat priced in
+        GBP on Global).
+        """
+        seat = run.seats.filter(type=seat_type).first()
+        if seat is not None:
+            if seat.price != 0:
+                seat.price = 0
+                seat.save()
+            return seat
+        currency = self._free_seat_currency(currency_code)
+        if currency is None:
+            logger.warning(
+                'No currency available to create free [%s] seat for run [%s]; skipping.', seat_type.slug, run.key,
+            )
+            return None
+        logger.info('Created free [%s] seat for run [%s] from LMS modes.', seat_type.slug, run.key)
+        return run.seats.create(type=seat_type, currency=currency, price=0, draft=draft)
+
+    @staticmethod
+    def _free_seat_currency(currency_code):
+        """
+        Resolve the Currency for a newly created free seat.
+
+        Prefers the code the LMS reported for the mode, falls back to USD.
+        Returns None only if neither exists in the catalog Currency table.
+        """
+        for code in filter(None, (currency_code, 'USD')):
+            currency = Currency.objects.filter(code=code).first()
+            if currency is not None:
+                return currency
+        return None
 
 
 class EcommerceApiDataLoader(AbstractDataLoader):
