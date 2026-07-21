@@ -16,6 +16,7 @@ from edx_toggles.toggles.testutils import override_waffle_switch
 from pytz import UTC
 from slumber.exceptions import HttpClientError
 
+from course_discovery.apps.core.models import Currency
 from course_discovery.apps.core.tests.utils import mock_api_callback, mock_jpeg_callback
 from course_discovery.apps.course_metadata.choices import CourseRunPacing, CourseRunStatus
 from course_discovery.apps.course_metadata.data_loaders.api import (
@@ -1300,3 +1301,104 @@ class ProgramsApiDataLoaderTests(DataLoaderTestMixin, TestCase):
         for program in programs:
             self.assert_program_loaded(program)
             self.assert_program_banner_image_loaded(program)
+
+
+class CoursesApiDataLoaderFreeSeatsTests(DataLoaderTestMixin, TestCase):
+    """
+    Tests for HARROW_6-4839: materialize free (honor/audit) seats from the
+    authoritative LMS enrollment modes (CoursesApiDataLoader.update_free_seats).
+    """
+    loader_class = CoursesApiDataLoader
+
+    @property
+    def api_url(self):
+        return self.partner.courses_api_url
+
+    def setUp(self):
+        super().setUp()
+        self.honor = SeatTypeFactory.honor()
+        self.audit = SeatTypeFactory.audit()
+        self.usd = Currency.objects.get(code='USD')
+
+    @staticmethod
+    def _body(*slugs, currency='USD'):
+        return {'modes': [{'slug': slug, 'min_price': 0, 'currency': currency} for slug in slugs]}
+
+    @staticmethod
+    def _empty_run():
+        run = CourseRunFactory()
+        run.seats.all().delete()
+        return run
+
+    def test_creates_free_seat_from_lms_mode(self):
+        run = self._empty_run()
+        self.loader.update_free_seats(run, self._body('honor'))
+        assert run.seats.count() == 1
+        seat = run.seats.get(type=self.honor)
+        assert seat.price == 0
+        assert seat.currency == self.usd
+
+    def test_matches_existing_seat_by_type_no_duplicate(self):
+        run = self._empty_run()
+        other_currency = Currency.objects.exclude(code='USD').first()
+        SeatFactory(course_run=run, type=self.honor, currency=other_currency, price=0)
+        self.loader.update_free_seats(run, self._body('honor'))
+        # Existing honor seat reused (matched by type) -- no duplicate in another currency.
+        assert run.seats.filter(type=self.honor).count() == 1
+        assert run.seats.get(type=self.honor).currency == other_currency
+
+    def test_prunes_free_seat_not_reported_on_unpaid_run(self):
+        run = self._empty_run()
+        SeatFactory(course_run=run, type=self.honor, currency=self.usd, price=0)
+        SeatFactory(course_run=run, type=self.audit, currency=self.usd, price=0)
+        self.loader.update_free_seats(run, self._body('honor'))
+        assert set(run.seats.values_list('type__slug', flat=True)) == {Seat.HONOR}
+
+    def test_does_not_prune_free_seat_when_paid_seat_present(self):
+        run = self._empty_run()
+        SeatFactory(course_run=run, type=SeatTypeFactory.professional(), currency=self.usd)
+        SeatFactory(course_run=run, type=self.honor, currency=self.usd, price=0)
+        # LMS reports no free modes; honor must survive because a paid seat exists.
+        self.loader.update_free_seats(run, {'modes': []})
+        assert run.seats.filter(type=self.honor).exists()
+
+    def test_noop_when_modes_key_absent(self):
+        run = self._empty_run()
+        SeatFactory(course_run=run, type=self.honor, currency=self.usd, price=0)
+        self.loader.update_free_seats(run, {})
+        assert run.seats.filter(type=self.honor).count() == 1
+
+    def test_currency_falls_back_to_usd(self):
+        run = self._empty_run()
+        self.loader.update_free_seats(run, self._body('honor', currency='ZZZ'))
+        assert run.seats.get(type=self.honor).currency == self.usd
+
+    def test_idempotent(self):
+        run = self._empty_run()
+        body = self._body('honor')
+        self.loader.update_free_seats(run, body)
+        self.loader.update_free_seats(run, body)
+        assert run.seats.filter(type=self.honor).count() == 1
+
+
+class EcommerceApiDataLoaderKeepHonorTests(DataLoaderTestMixin, TestCase):
+    """
+    HARROW_6-4839: the ecommerce loader must not delete LMS-owned honor seats
+    (they are materialized by CoursesApiDataLoader.update_free_seats, not backed
+    by an ecommerce product).
+    """
+    loader_class = EcommerceApiDataLoader
+
+    @property
+    def api_url(self):
+        return self.partner.ecommerce_api_url
+
+    def test_update_seats_keeps_honor_seat(self):
+        run = CourseRunFactory()
+        run.seats.all().delete()
+        usd = Currency.objects.get(code='USD')
+        SeatFactory(course_run=run, type=SeatTypeFactory.honor(), currency=usd, price=0)
+        SeatFactory(course_run=run, type=SeatTypeFactory.audit(), currency=usd, price=0)
+        # No ecommerce products for this run: honor is kept, the unbacked audit removed.
+        self.loader.update_seats({'id': run.key, 'products': []})
+        assert set(run.seats.values_list('type__slug', flat=True)) == {Seat.HONOR}
