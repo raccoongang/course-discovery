@@ -1381,24 +1381,58 @@ class CoursesApiDataLoaderFreeSeatsTests(DataLoaderTestMixin, TestCase):
         assert run.seats.filter(type=self.honor).count() == 1
 
 
-class EcommerceApiDataLoaderKeepHonorTests(DataLoaderTestMixin, TestCase):
+class EcommerceApiDataLoaderKeepFreeSeatsTests(DataLoaderTestMixin, TestCase):
     """
-    HARROW_6-4839: the ecommerce loader must not delete LMS-owned honor seats
+    HARROW_6-4839: the ecommerce loader must not delete LMS-owned free seats
     (they are materialized by CoursesApiDataLoader.update_free_seats, not backed
     by an ecommerce product).
     """
     loader_class = EcommerceApiDataLoader
 
+    @staticmethod
+    def _seatless_run():
+        run = CourseRunFactory()
+        run.seats.all().delete()
+        return run
+
     @property
     def api_url(self):
         return self.partner.ecommerce_api_url
 
-    def test_update_seats_keeps_honor_seat(self):
-        run = CourseRunFactory()
-        run.seats.all().delete()
+    def test_update_seats_keeps_free_seats(self):
+        run = self._seatless_run()
         usd = Currency.objects.get(code='USD')
         SeatFactory(course_run=run, type=SeatTypeFactory.honor(), currency=usd, price=0)
         SeatFactory(course_run=run, type=SeatTypeFactory.audit(), currency=usd, price=0)
-        # No ecommerce products for this run: honor is kept, the unbacked audit removed.
+        # No ecommerce products for this run: both free seats are LMS-owned and kept.
         self.loader.update_seats({'id': run.key, 'products': []})
-        assert set(run.seats.values_list('type__slug', flat=True)) == {Seat.HONOR}
+        assert set(run.seats.values_list('type__slug', flat=True)) == {Seat.HONOR, Seat.AUDIT}
+
+    def test_update_seats_still_removes_unbacked_paid_seat(self):
+        run = self._seatless_run()
+        SeatFactory(course_run=run, type=SeatTypeFactory.professional(), currency=Currency.objects.get(code='USD'))
+        self.loader.update_seats({'id': run.key, 'products': []})
+        assert not run.seats.exists()
+
+    def test_audit_seat_survives_a_full_loader_cycle(self):
+        """
+        Regression for the create-then-delete thrash seen on Global stage.
+
+        The LMS loader materializes an audit seat from the reported modes; the
+        ecommerce loader then runs over the same seatless-in-ecommerce run and
+        must leave that seat in place. Otherwise the run ends every cycle with
+        no seats and its course stays untypeable, aborting the whole ingest.
+        """
+        run = self._seatless_run()
+        # Same JWT stub the mixin uses for its own loader -- the constructor
+        # decodes the mocked access token to resolve the service username.
+        with mock.patch(
+            'course_discovery.apps.course_metadata.data_loaders.configured_jwt_decode_handler',
+            return_value={'preferred_username': 'test_username'},
+        ):
+            courses_loader = CoursesApiDataLoader(self.partner, self.partner.courses_api_url)
+        courses_loader.update_free_seats(run, {'modes': [{'slug': 'audit', 'min_price': 0, 'currency': 'usd'}]})
+        assert set(run.seats.values_list('type__slug', flat=True)) == {Seat.AUDIT}
+
+        self.loader.update_seats({'id': run.key, 'products': []})
+        assert set(run.seats.values_list('type__slug', flat=True)) == {Seat.AUDIT}
