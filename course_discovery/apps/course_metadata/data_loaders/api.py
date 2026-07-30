@@ -532,9 +532,17 @@ class EcommerceApiDataLoader(AbstractDataLoader):
         has_empty_type = (Q(type=empty_course_type, course_runs__seats__isnull=False) |
                           Q(course_runs__type=empty_course_run_type, course_runs__seats__isnull=False))
         for course in Course.everything.filter(has_empty_type, partner=self.partner).distinct().iterator():
+            # Self-heal free (honor/audit) courses whose data left some runs seatless.
+            # calculate_course_type cannot upgrade an 'empty' course that mixes seated and
+            # seatless runs (a seatless run matches only the empty CourseRunType), so clone
+            # the course's existing free seat onto its seatless runs first. Paid/entitlement
+            # courses are left untouched and fall through to the manual-review path below.
+            self._heal_free_course_seats(course)
             if not calculate_course_type(course, commit=True):
-                logger.warning('Calculating course type failure occurred for [%s].', course)
-                self.processing_failure_occurred = True
+                # A single un-typeable course must not abort the entire refresh: raising here
+                # blocks deletes and leaves the whole catalog stale. Log and skip instead; the
+                # course keeps its 'empty' type until its seat data is corrected.
+                logger.warning('Calculating course type failure occurred for [%s]; skipping.', course)
 
         if (self.course_run_count != course_runs['count'] or
                 self.entitlement_count != entitlements['count'] or
@@ -542,6 +550,37 @@ class EcommerceApiDataLoader(AbstractDataLoader):
             # The count expected should match the count received
             logger.warning('There is a mismatch in the expected count of results and the actual results.')
             self.processing_failure_occurred = True
+
+    def _heal_free_course_seats(self, course):
+        """
+        Clone a free seat onto the seatless runs of an all-free course.
+
+        Ensures every run of a course whose seats are all honor/audit carries a seat,
+        so calculate_course_type can upgrade the course instead of failing the whole
+        refresh. Idempotent (a no-op once every run is seated) and a no-op for any
+        course that has a paid/entitlement seat (those need manual review).
+        """
+        runs = list(course.course_runs.all())
+        seats = [seat for run in runs for seat in run.seats.all()]
+        if not seats:
+            return
+        free_types = {Seat.HONOR, Seat.AUDIT}
+        if any(seat.type_id not in free_types for seat in seats):
+            return
+        template = seats[0]
+        for run in runs:
+            if run.seats.exists():
+                continue
+            logger.info('Healing seatless run [%s]: cloning [%s] seat.', run.key, template.type_id)
+            Seat.objects.create(
+                course_run=run,
+                type=template.type,
+                price=template.price,
+                currency=template.currency,
+                credit_provider=template.credit_provider,
+                credit_hours=template.credit_hours,
+                draft=run.draft,
+            )
 
     def _pagerange(self, count):
         pages = int(math.ceil(count / self.PAGE_SIZE))
